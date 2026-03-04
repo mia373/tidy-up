@@ -31,6 +31,39 @@ export const addTask = async (
   }
 };
 
+// Pure function — transforms AI suggestions into a Supabase insert payload (unit-testable).
+export const buildBatchPayload = (
+  tasks: Array<{ title: string; points: number }>,
+  homeId: string,
+  createdBy: string
+) =>
+  tasks.map((t) => ({
+    home_id: homeId,
+    title: t.title,
+    points: t.points,
+    status: "open" as const,
+    frequency: "once" as const,
+    created_by: createdBy,
+    completed_by: null,
+    completed_at: null,
+  }));
+
+// Batch-inserts all tasks in a single query (atomic — all succeed or all fail).
+export const addTasksBatch = async (
+  tasks: Array<{ title: string; points: number }>,
+  homeId: string,
+  createdBy: string
+): Promise<number> => {
+  try {
+    const payload = buildBatchPayload(tasks, homeId, createdBy);
+    const { data, error } = await supabase.from("tasks").insert(payload).select("id");
+    if (error) throw error;
+    return data?.length ?? 0;
+  } catch {
+    throw new Error("Failed to add tasks. Please try again.");
+  }
+};
+
 export const fetchCompletedTasks = async (
   homeId: string
 ): Promise<CompletedTask[]> => {

@@ -1,4 +1,4 @@
-import { AppUser, CompletedTask, Home, Task } from "../types/models";
+import { AppUser, CompletedTask, Home, HomeType, Task } from "../types/models";
 
 export function mapUser(row: Record<string, unknown>): AppUser {
   return {
@@ -20,6 +20,10 @@ export function mapHome(row: Record<string, unknown>): Home {
     inviteCode: row.invite_code as string,
     members: row.members as string[],
     createdAt: row.created_at as string,
+    homeType: (row.home_type as HomeType | null) ?? null,
+    rooms: (row.rooms as string[] | null) ?? [],
+    hasPets: (row.has_pets as boolean | null) ?? false,
+    memberCount: (row.member_count as number | null) ?? 0,
   };
 }
 

@@ -16,6 +16,7 @@ import { completeTask } from "../services/tasks";
 import { signOut } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 import { useNotifications } from "../hooks/useNotifications";
+import { useGenerateTasks } from "../hooks/useGenerateTasks";
 
 export default function TasksScreen() {
   const user = useAuthStore((s) => s.user);
@@ -23,6 +24,7 @@ export default function TasksScreen() {
   const { tasks, loading } = useTasks(user?.homeId ?? null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const { notifyTaskComplete } = useNotifications();
+  const { triggerGeneration, generating } = useGenerateTasks();
 
   const handleSignOut = async () => {
     try {
@@ -103,6 +105,18 @@ export default function TasksScreen() {
               <Text style={styles.emptySubtext}>
                 Add one from the Add Task tab.
               </Text>
+              <TouchableOpacity
+                style={styles.suggestBtn}
+                onPress={triggerGeneration}
+                disabled={generating}
+                activeOpacity={0.8}
+              >
+                {generating ? (
+                  <ActivityIndicator size="small" color={colors.surface} />
+                ) : (
+                  <Text style={styles.suggestBtnText}>✨  Suggest tasks</Text>
+                )}
+              </TouchableOpacity>
             </View>
           }
           contentContainerStyle={
@@ -209,5 +223,21 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
+  },
+  suggestBtn: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    minWidth: 160,
+    alignItems: "center",
+  },
+  suggestBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
   },
 });

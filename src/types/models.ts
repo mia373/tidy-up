@@ -1,9 +1,15 @@
+export type HomeType = 'apartment' | 'house' | 'dorm' | 'studio';
+
 export interface Home {
   id: string;
   name: string;
   inviteCode: string;
   members: string[];
   createdAt: string;
+  homeType: HomeType | null;
+  rooms: string[];
+  hasPets: boolean;
+  memberCount: number;
 }
 
 export interface AppUser {
@@ -34,9 +40,21 @@ export interface CompletedTask extends Task {
   completerName: string | null;
 }
 
+export interface SuggestedTask {
+  title: string;
+  points: number;
+  room: string;
+}
+
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
+};
+
+export type AppStackParamList = {
+  Main: undefined;
+  HomeProfile: undefined;
+  SuggestedTasks: { tasks: SuggestedTask[] };
 };
 
 export type MainTabParamList = {

@@ -121,3 +121,23 @@ alter table tasks add column if not exists frequency text not null default 'once
   check (frequency in ('once', 'daily', 'weekly'));
 
 -- Re-run the updated complete_task RPC above to apply streak + recurring logic
+
+-- ============================================================
+-- PHASE 9.1 MIGRATIONS — Home Profile columns for AI task generation
+-- ============================================================
+
+alter table homes add column if not exists home_type  text    check (home_type in ('apartment', 'house', 'dorm', 'studio'));
+alter table homes add column if not exists rooms      text[]  not null default '{}';
+alter table homes add column if not exists has_pets   boolean not null default false;
+
+-- member_count: auto-derived from the members array length as a stored generated column
+alter table homes add column if not exists member_count int
+  generated always as (coalesce(array_length(members, 1), 0)) stored;
+
+-- ============================================================
+-- PHASE 9.3/9.4 MIGRATIONS — AI rate limiting columns
+-- ============================================================
+
+-- Track how many times AI task generation has been triggered today per home
+alter table homes add column if not exists ai_requests_today   int  not null default 0;
+alter table homes add column if not exists ai_requests_reset_at date;

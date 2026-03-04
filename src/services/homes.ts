@@ -1,5 +1,7 @@
 import { supabase } from "./supabase";
 import { generateInviteCode } from "../utils/inviteCode";
+import { Home, HomeType } from "../types/models";
+import { mapHome } from "../utils/mappers";
 
 export const createHome = async (
   name: string,
@@ -24,6 +26,39 @@ export const createHome = async (
     return home.id as string;
   } catch {
     throw new Error("Failed to create home. Please try again.");
+  }
+};
+
+export const fetchHome = async (homeId: string): Promise<Home> => {
+  try {
+    const { data, error } = await supabase
+      .from("homes")
+      .select("*")
+      .eq("id", homeId)
+      .single();
+    if (error || !data) throw error;
+    return mapHome(data as Record<string, unknown>);
+  } catch {
+    throw new Error("Failed to fetch home.");
+  }
+};
+
+export const updateHomeProfile = async (
+  homeId: string,
+  profile: { homeType: HomeType | null; rooms: string[]; hasPets: boolean }
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from("homes")
+      .update({
+        home_type: profile.homeType,
+        rooms: profile.rooms,
+        has_pets: profile.hasPets,
+      })
+      .eq("id", homeId);
+    if (error) throw error;
+  } catch {
+    throw new Error("Failed to save home profile. Please try again.");
   }
 };
 

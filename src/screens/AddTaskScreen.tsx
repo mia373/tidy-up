@@ -6,6 +6,7 @@ import {
   Alert,
   View,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -14,6 +15,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { addTask } from "../services/tasks";
 import { useAuthStore } from "../store/useAuthStore";
 import { MainTabParamList } from "../types/models";
+import { useGenerateTasks } from "../hooks/useGenerateTasks";
 
 type Frequency = "once" | "daily" | "weekly";
 
@@ -29,6 +31,7 @@ type Props = {
 
 export default function AddTaskScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
+  const { triggerGeneration, generating } = useGenerateTasks();
   const [title, setTitle] = useState("");
   const [pointsText, setPointsText] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
@@ -64,7 +67,21 @@ export default function AddTaskScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Add Task ✏️</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Add Task ✏️</Text>
+        <TouchableOpacity
+          style={styles.sparkleBtn}
+          onPress={triggerGeneration}
+          disabled={generating}
+          activeOpacity={0.8}
+        >
+          {generating ? (
+            <ActivityIndicator size="small" color={colors.text} />
+          ) : (
+            <Text style={styles.sparkleBtnText}>✨</Text>
+          )}
+        </TouchableOpacity>
+      </View>
       <TextInput
         style={styles.input}
         placeholder="What needs doing?"
@@ -115,12 +132,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     padding: spacing.lg,
   },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xl,
+  },
   title: {
     fontSize: 32,
     fontWeight: "900",
     color: colors.text,
     letterSpacing: -0.5,
-    marginBottom: spacing.xl,
+  },
+  sparkleBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 12,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow,
+  },
+  sparkleBtnText: {
+    fontSize: 20,
   },
   input: {
     backgroundColor: colors.surface,

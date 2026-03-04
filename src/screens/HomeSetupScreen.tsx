@@ -16,6 +16,7 @@ import { useAuthStore } from "../store/useAuthStore";
 export default function HomeSetupScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const setNeedsHomeProfile = useAuthStore((s) => s.setNeedsHomeProfile);
 
   const [homeName, setHomeName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -31,6 +32,7 @@ export default function HomeSetupScreen() {
     try {
       setCreatingHome(true);
       const homeId = await createHome(homeName.trim(), user.id);
+      setNeedsHomeProfile(true);
       setUser({ ...user, homeId });
     } catch (error) {
       Alert.alert(

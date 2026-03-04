@@ -16,6 +16,7 @@ A gamified household task manager — earn points for chores, compete with your 
 | Framework    | Expo + React Native (TypeScript)                 |
 | Auth         | Supabase Auth (email/password)                   |
 | Database     | Supabase Postgres (real-time via channels)       |
+| AI           | Gemini 2.5 Flash Lite (via Supabase Edge Function) |
 | State        | Zustand                                          |
 | Navigation   | React Navigation                                 |
 | Build/Deploy | Expo EAS (cloud builds for iOS)                  |
@@ -56,7 +57,27 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_publishable_key
 ```
 
-### 4. Run in Expo Go
+### 4. Deploy the AI Edge Function
+
+The AI task generation feature uses a Supabase Edge Function backed by **Gemini 2.5 Flash Lite** (free tier available at [aistudio.google.com](https://aistudio.google.com)).
+
+**Option A: Supabase Dashboard (no CLI needed)**
+1. Go to **Edge Functions** → create a new function named `generate-tasks`
+2. Paste the contents of `supabase/functions/generate-tasks/index.ts`
+3. **Edge Functions → Manage secrets** → add `GEMINI_API_KEY` = your Google AI Studio key
+4. **Edge Functions → generate-tasks → Settings** → turn off **Verify JWT**
+
+**Option B: Supabase CLI**
+```bash
+supabase login
+supabase link --project-ref your-project-ref
+supabase secrets set GEMINI_API_KEY=your-google-ai-studio-key
+supabase functions deploy generate-tasks --no-verify-jwt
+```
+
+> Skip this step if you're not using the AI task generation feature yet.
+
+### 5. Run in Expo Go
 
 ```bash
 npx expo start
@@ -64,7 +85,7 @@ npx expo start
 
 Scan the QR code with Expo Go — Supabase Auth works fully in Expo Go with no native build required.
 
-### 5. Build for iOS (App Store / TestFlight)
+### 6. Build for iOS (App Store / TestFlight)
 
 ```bash
 # Login to Expo
@@ -117,6 +138,7 @@ These features have been implemented beyond the MVP:
 - **Streak tracking** — consecutive days of completing tasks
 - **Task history screen** — view all completed tasks
 - **Settings screen** — leave home, change display name
+- **AI task generation** — Gemini 2.5 Flash Lite generates a personalised chore list based on home type, rooms, and pets
 
 ## License
 
