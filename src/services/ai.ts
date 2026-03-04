@@ -41,10 +41,48 @@ const invoke = async (homeId: string): Promise<SuggestedTask[]> => {
   return data as SuggestedTask[];
 };
 
+// Fetch existing open task titles for this home (case-insensitive dedup set).
+const fetchExistingTitles = async (homeId: string): Promise<Set<string>> => {
+  const { data } = await supabase
+    .from("tasks")
+    .select("title")
+    .eq("home_id", homeId)
+    .eq("status", "open");
+  return new Set((data ?? []).map((t: { title: string }) => t.title.toLowerCase()));
+};
+
+// Returns true if the error looks like a network connectivity failure.
+const isOfflineError = (err: unknown): boolean => {
+  const msg = err instanceof Error ? err.message.toLowerCase() : "";
+  return (
+    msg.includes("network request failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("fetch failed") ||
+    msg.includes("network error")
+  );
+};
+
 export const generateTasks = async (homeId: string): Promise<SuggestedTask[]> => {
   try {
-    return await invoke(homeId);
+    const raw = await invoke(homeId);
+
+    // 9.9.1 — deduplicate titles returned by AI (case-insensitive)
+    const seen = new Set<string>();
+    const deduped = raw.filter((t) => {
+      const key = t.title.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // 9.9.2 — filter out tasks that already exist as open tasks in this home
+    const existingTitles = await fetchExistingTitles(homeId);
+    return deduped.filter((t) => !existingTitles.has(t.title.toLowerCase()));
   } catch (firstError) {
+    // Surface offline errors immediately with a clear message
+    if (isOfflineError(firstError)) {
+      throw new Error("No internet connection. Please check your network and try again.");
+    }
     // Don't retry rate/quota limit errors — surface them immediately
     const msg = firstError instanceof Error ? firstError.message.toLowerCase() : "";
     if (msg.includes("limit") || msg.includes("quota") || msg.includes("exceeded")) {
@@ -54,6 +92,9 @@ export const generateTasks = async (homeId: string): Promise<SuggestedTask[]> =>
     try {
       return await invoke(homeId);
     } catch (error) {
+      if (isOfflineError(error)) {
+        throw new Error("No internet connection. Please check your network and try again.");
+      }
       throw new Error(
         error instanceof Error ? error.message : "Failed to generate tasks. Please try again."
       );

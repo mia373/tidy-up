@@ -79,6 +79,8 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
         points: Math.max(1, parseInt(t.points, 10) || 10),
       }));
       const count = await addTasksBatch(payload, user.homeId, user.id);
+      // 9.9.4 — track generated vs. kept for prompt tuning
+      console.error(`[AI analytics] generated=${tasks.length} kept=${count} ratio=${tasks.length > 0 ? (count / tasks.length).toFixed(2) : "n/a"}`);
       navigation.navigate("Main");
       Alert.alert("Done!", `Added ${count} task${count !== 1 ? "s" : ""} to your home. 🎉`);
     } catch (error) {
