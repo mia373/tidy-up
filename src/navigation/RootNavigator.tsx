@@ -4,15 +4,11 @@ import { useAuthStore } from "../store/useAuthStore";
 import { LoadingScreen } from "../components/LoadingScreen";
 import AuthNavigator from "./AuthNavigator";
 import HomeSetupScreen from "../screens/HomeSetupScreen";
-import HomeProfileScreen from "../screens/HomeProfileScreen";
-import SuggestedTasksScreen from "../screens/SuggestedTasksScreen";
-import MainNavigator from "./MainNavigator";
+import AppNavigator from "./AppNavigator";
 
 export default function RootNavigator() {
   const user = useAuthStore((s) => s.user);
   const loading = useAuthStore((s) => s.loading);
-  const needsHomeProfile = useAuthStore((s) => s.needsHomeProfile);
-  const suggestedTasks = useAuthStore((s) => s.suggestedTasks);
 
   if (loading) {
     return <LoadingScreen />;
@@ -24,12 +20,8 @@ export default function RootNavigator() {
         <AuthNavigator />
       ) : !user.homeId ? (
         <HomeSetupScreen />
-      ) : needsHomeProfile ? (
-        <HomeProfileScreen />
-      ) : suggestedTasks !== null ? (
-        <SuggestedTasksScreen />
       ) : (
-        <MainNavigator />
+        <AppNavigator />
       )}
     </NavigationContainer>
   );

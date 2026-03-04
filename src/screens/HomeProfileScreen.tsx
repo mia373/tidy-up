@@ -10,12 +10,15 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { updateHomeProfile } from "../services/homes";
 import { generateTasks } from "../services/ai";
 import { useAuthStore } from "../store/useAuthStore";
-import { HomeType } from "../types/models";
+import { AppStackParamList, HomeType } from "../types/models";
+
+type Props = NativeStackScreenProps<AppStackParamList, "HomeProfile">;
 
 const HOME_TYPES: { label: string; value: HomeType; icon: string }[] = [
   { label: "Apartment", value: "apartment", icon: "🏢" },
@@ -35,10 +38,8 @@ const DEFAULT_ROOMS = [
   "Office",
 ];
 
-export default function HomeProfileScreen() {
+export default function HomeProfileScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
-  const setNeedsHomeProfile = useAuthStore((s) => s.setNeedsHomeProfile);
-  const setSuggestedTasks = useAuthStore((s) => s.setSuggestedTasks);
 
   const [homeType, setHomeType] = useState<HomeType | null>(null);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
@@ -68,8 +69,7 @@ export default function HomeProfileScreen() {
       setGenerating(true);
       await updateHomeProfile(user.homeId, { homeType, rooms: selectedRooms, hasPets });
       const tasks = await generateTasks(user.homeId);
-      setSuggestedTasks(tasks);
-      setNeedsHomeProfile(false);
+      navigation.replace("SuggestedTasks", { tasks });
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Something went wrong");
     } finally {

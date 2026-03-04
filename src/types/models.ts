@@ -51,6 +51,12 @@ export type AuthStackParamList = {
   Signup: undefined;
 };
 
+export type AppStackParamList = {
+  Main: undefined;
+  HomeProfile: undefined;
+  SuggestedTasks: { tasks: SuggestedTask[] };
+};
+
 export type MainTabParamList = {
   Tasks: undefined;
   AddTask: undefined;

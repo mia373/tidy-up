@@ -9,10 +9,14 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addTasksBatch } from "../services/tasks";
 import { useAuthStore } from "../store/useAuthStore";
+import { AppStackParamList } from "../types/models";
+
+type Props = NativeStackScreenProps<AppStackParamList, "SuggestedTasks">;
 
 interface EditableTask {
   title: string;
@@ -21,13 +25,11 @@ interface EditableTask {
   selected: boolean;
 }
 
-export default function SuggestedTasksScreen() {
+export default function SuggestedTasksScreen({ navigation, route }: Props) {
   const user = useAuthStore((s) => s.user);
-  const suggestedTasks = useAuthStore((s) => s.suggestedTasks);
-  const setSuggestedTasks = useAuthStore((s) => s.setSuggestedTasks);
 
   const [tasks, setTasks] = useState<EditableTask[]>(() =>
-    (suggestedTasks ?? []).map((t) => ({
+    route.params.tasks.map((t) => ({
       title: t.title,
       points: String(t.points),
       room: t.room,
@@ -77,7 +79,7 @@ export default function SuggestedTasksScreen() {
         points: Math.max(1, parseInt(t.points, 10) || 10),
       }));
       const count = await addTasksBatch(payload, user.homeId, user.id);
-      setSuggestedTasks(null); // clears state → RootNavigator shows MainNavigator (Tasks tab)
+      navigation.navigate("Main");
       Alert.alert("Done!", `Added ${count} task${count !== 1 ? "s" : ""} to your home. 🎉`);
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Something went wrong");
