@@ -1,27 +1,31 @@
 import { useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db, auth } from "../services/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { supabase } from "../services/supabase";
 import { useAuthStore } from "../store/useAuthStore";
-import { AppUser } from "../types/models";
+import { mapUser } from "../utils/mappers";
 
 export function useAuthListener() {
   const setUser = useAuthStore((s) => s.setUser);
   const setLoading = useAuthStore((s) => s.setLoading);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (snap.exists()) {
-          setUser({ id: snap.id, ...snap.data() } as AppUser);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const { data } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+          setUser(data ? mapUser(data as Record<string, unknown>) : null);
+        } else {
+          setUser(null);
         }
-      } else {
-        setUser(null);
+        if (event === "INITIAL_SESSION") {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    });
+    );
 
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 }

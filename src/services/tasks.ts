@@ -1,17 +1,6 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  writeBatch,
-  increment,
-  serverTimestamp,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "./firebase";
+import { supabase } from "./supabase";
 import { Task } from "../types/models";
+import { mapTask } from "../utils/mappers";
 
 export const addTask = async (
   homeId: string,
@@ -20,18 +9,22 @@ export const addTask = async (
   createdBy: string
 ): Promise<string> => {
   try {
-    const ref = await addDoc(collection(db, "tasks"), {
-      homeId,
-      title,
-      points,
-      status: "open",
-      createdBy,
-      completedBy: null,
-      completedAt: null,
-      createdAt: serverTimestamp(),
-    });
-    return ref.id;
-  } catch (error) {
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        home_id: homeId,
+        title,
+        points,
+        status: "open",
+        created_by: createdBy,
+        completed_by: null,
+        completed_at: null,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    return data.id as string;
+  } catch {
     throw new Error("Failed to create task. Please try again.");
   }
 };
@@ -42,22 +35,13 @@ export const completeTask = async (
   taskPoints: number
 ): Promise<void> => {
   try {
-    const batch = writeBatch(db);
-    const taskRef = doc(db, "tasks", taskId);
-    const userRef = doc(db, "users", userId);
-
-    batch.update(taskRef, {
-      status: "completed",
-      completedBy: userId,
-      completedAt: serverTimestamp(),
+    const { error } = await supabase.rpc("complete_task", {
+      p_task_id: taskId,
+      p_user_id: userId,
+      p_points: taskPoints,
     });
-
-    batch.update(userRef, {
-      points: increment(taskPoints),
-    });
-
-    await batch.commit();
-  } catch (error) {
+    if (error) throw error;
+  } catch {
     throw new Error("Failed to complete task. Please try again.");
   }
 };
@@ -66,18 +50,28 @@ export const subscribeToTasks = (
   homeId: string,
   callback: (tasks: Task[]) => void
 ): (() => void) => {
-  const q = query(
-    collection(db, "tasks"),
-    where("homeId", "==", homeId),
-    where("status", "==", "open"),
-    orderBy("createdAt", "desc")
-  );
+  const fetchTasks = async () => {
+    const { data } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("home_id", homeId)
+      .eq("status", "open")
+      .order("created_at", { ascending: false });
+    callback((data ?? []).map(mapTask));
+  };
 
-  return onSnapshot(q, (snapshot) => {
-    const tasks = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as Task[];
-    callback(tasks);
-  });
+  void fetchTasks();
+
+  const channel = supabase
+    .channel(`tasks:${homeId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "tasks", filter: `home_id=eq.${homeId}` },
+      () => void fetchTasks()
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 };

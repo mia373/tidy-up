@@ -1,12 +1,4 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  User as FirebaseUser,
-} from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { supabase } from "./supabase";
 
 export const signUp = async (
   email: string,
@@ -14,37 +6,37 @@ export const signUp = async (
   name: string
 ): Promise<void> => {
   try {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await setDoc(doc(db, "users", credential.user.uid), {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    if (!data.user) throw new Error("No user returned");
+
+    const { error: insertError } = await supabase.from("users").insert({
+      id: data.user.id,
       name,
       email,
-      homeId: null,
+      home_id: null,
       points: 0,
-      createdAt: serverTimestamp(),
     });
-  } catch (error) {
+    if (insertError) throw insertError;
+  } catch {
     throw new Error("Failed to create account. Please try again.");
   }
 };
 
 export const signIn = async (email: string, password: string): Promise<void> => {
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (error) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  } catch {
     throw new Error("Invalid email or password.");
   }
 };
 
 export const signOut = async (): Promise<void> => {
   try {
-    await firebaseSignOut(auth);
-  } catch (error) {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  } catch {
     throw new Error("Failed to sign out. Please try again.");
   }
-};
-
-export const onAuthChange = (
-  callback: (user: FirebaseUser | null) => void
-): (() => void) => {
-  return onAuthStateChanged(auth, callback);
 };

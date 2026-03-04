@@ -47,6 +47,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Text style={styles.emoji}>🌸</Text>
       <Text style={styles.title}>Welcome back</Text>
       <TextInput
         style={styles.input}
@@ -83,6 +84,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     justifyContent: "center",
   },
+  emoji: {
+    fontSize: 40,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
   title: {
     fontSize: 28,
     fontWeight: "700",
@@ -93,7 +99,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 10,
+    borderRadius: 16,
     padding: spacing.md,
     fontSize: 16,
     color: colors.text,

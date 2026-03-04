@@ -32,7 +32,7 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Leaderboard</Text>
+      <Text style={styles.title}>Leaderboard ✨</Text>
       {loading ? (
         <ActivityIndicator
           size="large"
@@ -59,7 +59,7 @@ export default function LeaderboardScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No members yet.</Text>
+              <Text style={styles.emptyText}>🌸 No members yet.</Text>
             </View>
           }
           contentContainerStyle={members.length === 0 ? styles.emptyContainer : undefined}

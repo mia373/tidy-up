@@ -1,16 +1,4 @@
-import {
-  collection,
-  addDoc,
-  doc,
-  updateDoc,
-  arrayUnion,
-  query,
-  where,
-  getDocs,
-  serverTimestamp,
-  writeBatch,
-} from "firebase/firestore";
-import { db } from "./firebase";
+import { supabase } from "./supabase";
 import { generateInviteCode } from "../utils/inviteCode";
 
 export const createHome = async (
@@ -19,17 +7,22 @@ export const createHome = async (
 ): Promise<string> => {
   try {
     const inviteCode = generateInviteCode();
-    const homeRef = await addDoc(collection(db, "homes"), {
-      name,
-      inviteCode,
-      members: [userId],
-      createdAt: serverTimestamp(),
-    });
-    await updateDoc(doc(db, "users", userId), {
-      homeId: homeRef.id,
-    });
-    return homeRef.id;
-  } catch (error) {
+
+    const { data: home, error: homeError } = await supabase
+      .from("homes")
+      .insert({ name, invite_code: inviteCode, members: [userId] })
+      .select("id")
+      .single();
+    if (homeError) throw homeError;
+
+    const { error: userError } = await supabase
+      .from("users")
+      .update({ home_id: home.id })
+      .eq("id", userId);
+    if (userError) throw userError;
+
+    return home.id as string;
+  } catch {
     throw new Error("Failed to create home. Please try again.");
   }
 };
@@ -39,24 +32,28 @@ export const joinHome = async (
   userId: string
 ): Promise<string> => {
   try {
-    const q = query(
-      collection(db, "homes"),
-      where("inviteCode", "==", inviteCode.toUpperCase())
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      throw new Error("Invalid invite code. Please check and try again.");
-    }
-    const homeDoc = snapshot.docs[0];
-    const batch = writeBatch(db);
-    batch.update(doc(db, "homes", homeDoc.id), {
-      members: arrayUnion(userId),
-    });
-    batch.update(doc(db, "users", userId), {
-      homeId: homeDoc.id,
-    });
-    await batch.commit();
-    return homeDoc.id;
+    const { data: home, error: findError } = await supabase
+      .from("homes")
+      .select("id, members")
+      .eq("invite_code", inviteCode.toUpperCase())
+      .single();
+    if (findError || !home) throw new Error("Invalid invite code. Please check and try again.");
+
+    const updatedMembers = [...(home.members as string[]), userId];
+
+    const { error: homeError } = await supabase
+      .from("homes")
+      .update({ members: updatedMembers })
+      .eq("id", home.id);
+    if (homeError) throw homeError;
+
+    const { error: userError } = await supabase
+      .from("users")
+      .update({ home_id: home.id })
+      .eq("id", userId);
+    if (userError) throw userError;
+
+    return home.id as string;
   } catch (error) {
     if (error instanceof Error) throw error;
     throw new Error("Failed to join home. Please try again.");

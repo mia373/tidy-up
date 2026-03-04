@@ -1,12 +1,13 @@
 export const colors = {
-  primary: "#4F46E5",
-  bg: "#F9FAFB",
+  primary: "#E88FAB",
+  bg: "#FFF5F9",
   surface: "#FFFFFF",
-  text: "#111827",
-  muted: "#6B7280",
-  success: "#10B981",
-  error: "#EF4444",
-  border: "#E5E7EB",
+  accent: "#C9A8E0",
+  text: "#3D2B3D",
+  muted: "#BFA8B8",
+  success: "#A8D5BA",
+  error: "#F4A0A0",
+  border: "#F2D9E8",
 };
 
 export const spacing = {

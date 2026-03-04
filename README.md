@@ -11,22 +11,22 @@ A gamified household task manager — earn points for chores, compete with your 
 
 ## Tech Stack
 
-| Layer        | Technology                          |
-| ------------ | ----------------------------------- |
-| Framework    | Expo + React Native (TypeScript)    |
-| Auth         | Firebase Authentication (email/pw)  |
-| Database     | Cloud Firestore (real-time)         |
-| State        | Zustand                             |
-| Navigation   | React Navigation                    |
-| Build/Deploy | Expo EAS (cloud builds for iOS)     |
+| Layer        | Technology                                       |
+| ------------ | ------------------------------------------------ |
+| Framework    | Expo + React Native (TypeScript)                 |
+| Auth         | Supabase Auth (email/password)                   |
+| Database     | Supabase Postgres (real-time via channels)       |
+| State        | Zustand                                          |
+| Navigation   | React Navigation                                 |
+| Build/Deploy | Expo EAS (cloud builds for iOS)                  |
 
 ## Prerequisites
 
 - **Node.js** ≥ 18 LTS
 - **npm** (comes with Node)
-- **EAS CLI:** `npm install -g eas-cli`
-- **Firebase project** with Auth + Firestore enabled
-- **Apple Developer Account** ($99/year) for iOS builds via EAS
+- **Expo Go** app on your phone (for development testing)
+- **Supabase project** (free tier works)
+- **EAS CLI** (`npm install -g eas-cli`) — only needed for App Store / TestFlight builds
 
 > **Windows users:** You do NOT need a Mac. EAS builds iOS in the cloud.
 
@@ -40,66 +40,31 @@ cd tidyup
 npm install
 ```
 
-### 2. Firebase Setup
+### 2. Supabase Setup
 
-1. Go to [Firebase Console](https://console.firebase.google.com/) → Create a new project called `tidyup`
-2. Enable **Authentication** → Sign-in method → Email/Password → Enable
-3. Enable **Cloud Firestore** → Create database → Start in test mode (we'll lock it down next)
-4. Go to Project Settings → Your Apps → Add Web App → Copy the config object
+1. Go to [supabase.com](https://supabase.com) → create a new project
+2. **Authentication → Providers → Email** → toggle off **"Confirm email"** → Save
+3. **SQL Editor** → New query → paste contents of `supabase-setup.sql` → Run
+4. **Project Settings → API** → copy **Project URL** and **Publishable** key
 
 ### 3. Environment Variables
 
 Create a `.env` file in the project root (this file is git-ignored):
 
 ```env
-EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_publishable_key
 ```
 
-### 4. Firestore Security Rules
-
-In Firebase Console → Firestore → Rules, paste:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    match /homes/{homeId} {
-      allow read: if request.auth != null
-                  && request.auth.uid in resource.data.members;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null
-                    && request.auth.uid in resource.data.members;
-    }
-
-    match /tasks/{taskId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-    }
-  }
-}
-```
-
-### 5. Run Locally
+### 4. Run in Expo Go
 
 ```bash
 npx expo start
 ```
 
-Scan the QR code with Expo Go for quick preview (note: full Firebase Auth requires a dev build — see below).
+Scan the QR code with Expo Go — Supabase Auth works fully in Expo Go with no native build required.
 
-### 6. Build for iOS (from Windows)
+### 5. Build for iOS (App Store / TestFlight)
 
 ```bash
 # Login to Expo
@@ -123,21 +88,21 @@ EAS will build in the cloud and give you a download link or push to TestFlight.
 ├── navigation/           # Auth gate + tab navigator
 ├── screens/              # One file per screen
 ├── components/           # Reusable UI pieces
-├── services/             # Firebase calls (auth, tasks, homes)
+├── services/             # Supabase calls (auth, tasks, homes, leaderboard)
 ├── store/                # Zustand state
 ├── hooks/                # Custom React hooks
 ├── types/                # TypeScript interfaces
-└── utils/                # Helpers (invite code generator, etc.)
+└── utils/                # Helpers (invite code generator, mappers)
 ```
 
 ## Available Scripts
 
-| Command                    | What it does                  |
-| -------------------------- | ----------------------------- |
-| `npx expo start`           | Start dev server              |
-| `eas build --platform ios` | Cloud build for iOS           |
-| `npx eslint src/`          | Lint TypeScript files         |
-| `npx tsc --noEmit`         | Type-check without emitting   |
+| Command                    | What it does                   |
+| -------------------------- | ------------------------------ |
+| `npx expo start`           | Start dev server (Expo Go)     |
+| `eas build --platform ios` | Cloud build for iOS            |
+| `npx eslint src/`          | Lint TypeScript files          |
+| `npx tsc --noEmit`         | Type-check without emitting    |
 
 ## MVP Scope
 

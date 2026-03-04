@@ -1,11 +1,9 @@
-import { Timestamp } from "firebase/firestore";
-
 export interface Home {
   id: string;
   name: string;
   inviteCode: string;
   members: string[];
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface AppUser {
@@ -14,7 +12,7 @@ export interface AppUser {
   email: string;
   homeId: string | null;
   points: number;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface Task {
@@ -25,8 +23,8 @@ export interface Task {
   status: "open" | "completed";
   createdBy: string;
   completedBy: string | null;
-  completedAt: Timestamp | null;
-  createdAt: Timestamp;
+  completedAt: string | null;
+  createdAt: string;
 }
 
 export type AuthStackParamList = {

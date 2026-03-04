@@ -15,7 +15,9 @@ export function TaskCard({ task, onComplete, loading }: TaskCardProps) {
     <View style={styles.card}>
       <View style={styles.info}>
         <Text style={styles.title}>{task.title}</Text>
-        <Text style={styles.points}>+{task.points} pts</Text>
+        <View style={styles.pointsBadge}>
+          <Text style={styles.points}>+{task.points} pts</Text>
+        </View>
       </View>
       <PrimaryButton
         title="Done"
@@ -34,13 +36,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: colors.surface,
     padding: spacing.md,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: spacing.sm,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.accent,
+    shadowColor: "#E88FAB",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
   info: {
     flex: 1,
@@ -51,9 +55,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
   },
+  pointsBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF0F5",
+    borderRadius: 50,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 4,
+  },
   points: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.primary,
-    marginTop: 2,
+    fontWeight: "600",
   },
 });

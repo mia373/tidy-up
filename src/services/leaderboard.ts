@@ -1,28 +1,32 @@
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-} from "firebase/firestore";
-import { db } from "./firebase";
+import { supabase } from "./supabase";
 import { AppUser } from "../types/models";
+import { mapUser } from "../utils/mappers";
 
 export const subscribeToLeaderboard = (
   homeId: string,
   callback: (members: AppUser[]) => void
 ): (() => void) => {
-  const q = query(
-    collection(db, "users"),
-    where("homeId", "==", homeId),
-    orderBy("points", "desc")
-  );
+  const fetchMembers = async () => {
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq("home_id", homeId)
+      .order("points", { ascending: false });
+    callback((data ?? []).map(mapUser));
+  };
 
-  return onSnapshot(q, (snapshot) => {
-    const members = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    })) as AppUser[];
-    callback(members);
-  });
+  void fetchMembers();
+
+  const channel = supabase
+    .channel(`leaderboard:${homeId}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "users", filter: `home_id=eq.${homeId}` },
+      () => void fetchMembers()
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 };

@@ -52,7 +52,7 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Tasks</Text>
+        <Text style={styles.title}>Tasks 🌸</Text>
         <TouchableOpacity onPress={handleSignOut}>
           <Text style={styles.signOut}>Sign out</Text>
         </TouchableOpacity>
@@ -76,7 +76,7 @@ export default function TasksScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No open tasks.</Text>
+              <Text style={styles.emptyText}>🫧 No open tasks.</Text>
               <Text style={styles.emptySubtext}>
                 Add a task using the Add Task tab.
               </Text>
