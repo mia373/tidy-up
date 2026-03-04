@@ -15,12 +15,14 @@ import { useTasks } from "../hooks/useTasks";
 import { completeTask } from "../services/tasks";
 import { signOut } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
+import { useNotifications } from "../hooks/useNotifications";
 
 export default function TasksScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { tasks, loading } = useTasks(user?.homeId ?? null);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const { notifyTaskComplete } = useNotifications();
 
   const handleSignOut = async () => {
     try {
@@ -37,8 +39,10 @@ export default function TasksScreen() {
     if (!user) return;
     try {
       setCompletingId(taskId);
+      const taskTitle = tasks.find((t) => t.id === taskId)?.title ?? "Task";
       await completeTask(taskId, user.id, points);
       setUser({ ...user, points: user.points + points });
+      void notifyTaskComplete(taskTitle, points);
     } catch (error) {
       Alert.alert(
         "Oops",
@@ -59,8 +63,15 @@ export default function TasksScreen() {
           )}
         </View>
         <View style={styles.headerRight}>
-          <View style={styles.pointsBadge}>
-            <Text style={styles.pointsBadgeText}>⭐ {user?.points ?? 0}</Text>
+          <View style={styles.badgeRow}>
+            <View style={styles.pointsBadge}>
+              <Text style={styles.pointsBadgeText}>⭐ {user?.points ?? 0}</Text>
+            </View>
+            {(user?.streak ?? 0) > 0 && (
+              <View style={styles.streakBadge}>
+                <Text style={styles.pointsBadgeText}>🔥 {user?.streak}</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
             <Text style={styles.signOutText}>Sign out</Text>
@@ -132,6 +143,19 @@ const styles = StyleSheet.create({
   headerRight: {
     alignItems: "flex-end",
     gap: 8,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  streakBadge: {
+    backgroundColor: "#FFD580",
+    borderWidth: 2.5,
+    borderColor: colors.border,
+    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    ...shadow,
   },
   pointsBadge: {
     backgroundColor: colors.accent,

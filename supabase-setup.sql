@@ -29,13 +29,14 @@ create table if not exists tasks (
   title        text not null,
   points       int not null default 10,
   status       text not null default 'open' check (status in ('open', 'completed')),
+  frequency    text not null default 'once' check (frequency in ('once', 'daily', 'weekly')),
   created_by   uuid not null references users(id),
   completed_by uuid references users(id),
   completed_at timestamptz,
   created_at   timestamptz not null default now()
 );
 
--- 4. RPC: complete_task (atomic update of task + user points)
+-- 4. RPC: complete_task (atomic: mark complete, award points, update streak, re-open if recurring)
 create or replace function complete_task(
   p_task_id  uuid,
   p_user_id  uuid,
@@ -45,20 +46,41 @@ returns void
 language plpgsql
 security definer
 as $$
+declare
+  v_task tasks%rowtype;
 begin
-  update tasks
-  set status       = 'completed',
-      completed_by = p_user_id,
-      completed_at = now()
+  -- Lock and fetch the task
+  select * into v_task
+  from tasks
   where id = p_task_id and status = 'open';
 
   if not found then
     raise exception 'Task not found or already completed';
   end if;
 
+  -- Mark the task completed
+  update tasks
+  set status       = 'completed',
+      completed_by = p_user_id,
+      completed_at = now()
+  where id = p_task_id;
+
+  -- Award points + update streak
   update users
-  set points = points + p_points
+  set points          = points + p_points,
+      streak          = case
+                          when last_streak_date = current_date     then streak
+                          when last_streak_date = current_date - 1 then streak + 1
+                          else 1
+                        end,
+      last_streak_date = current_date
   where id = p_user_id;
+
+  -- Re-open recurring tasks by inserting a fresh open copy
+  if v_task.frequency != 'once' then
+    insert into tasks (home_id, title, points, status, frequency, created_by)
+    values (v_task.home_id, v_task.title, v_task.points, 'open', v_task.frequency, v_task.created_by);
+  end if;
 end;
 $$;
 
@@ -85,3 +107,17 @@ create policy "users_update" on users for update to authenticated using (auth.ui
 create policy "tasks_select" on tasks for select to authenticated using (true);
 create policy "tasks_insert" on tasks for insert to authenticated with check (true);
 create policy "tasks_update" on tasks for update to authenticated using (true);
+
+-- ============================================================
+-- PHASE 8 MIGRATIONS — run these if upgrading an existing DB
+-- ============================================================
+
+-- Streak tracking columns on users
+alter table users add column if not exists streak           int  not null default 0;
+alter table users add column if not exists last_streak_date date;
+
+-- Recurring tasks column on tasks
+alter table tasks add column if not exists frequency text not null default 'once'
+  check (frequency in ('once', 'daily', 'weekly'));
+
+-- Re-run the updated complete_task RPC above to apply streak + recurring logic

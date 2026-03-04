@@ -6,6 +6,8 @@ import { colors } from "../theme";
 import TasksScreen from "../screens/TasksScreen";
 import AddTaskScreen from "../screens/AddTaskScreen";
 import LeaderboardScreen from "../screens/LeaderboardScreen";
+import HistoryScreen from "../screens/HistoryScreen";
+import SettingsScreen from "../screens/SettingsScreen";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -13,6 +15,8 @@ const TAB_ICONS: Record<string, string> = {
   Tasks: "✏️",
   AddTask: "➕",
   Leaderboard: "🏆",
+  History: "📋",
+  Settings: "⚙️",
 };
 
 // Outer View fills the corner gaps with the screen background color.
@@ -43,7 +47,7 @@ export default function MainNavigator() {
         headerShown: false,
         tabBarBackground: () => <TabBarBackground />,
         tabBarIcon: ({ focused }) => (
-          <Text style={{ fontSize: focused ? 22 : 19, opacity: focused ? 1 : 0.6 }}>
+          <Text style={{ fontSize: focused ? 19 : 16, opacity: focused ? 1 : 0.55 }}>
             {TAB_ICONS[route.name]}
           </Text>
         ),
@@ -52,16 +56,16 @@ export default function MainNavigator() {
           borderTopWidth: 0,
           height: 72,
           paddingBottom: 12,
-          paddingTop: 10,
+          paddingTop: 8,
           elevation: 0,
           shadowOpacity: 0,
         },
         tabBarActiveTintColor: "#4F46E5",
         tabBarInactiveTintColor: "#6B7280",
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: "700",
-          marginTop: 2,
+          marginTop: 1,
         },
       })}
     >
@@ -72,6 +76,8 @@ export default function MainNavigator() {
         options={{ tabBarLabel: "Add Task" }}
       />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <Tab.Screen name="History" component={HistoryScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }

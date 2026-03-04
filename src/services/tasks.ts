@@ -1,12 +1,13 @@
 import { supabase } from "./supabase";
-import { Task } from "../types/models";
-import { mapTask } from "../utils/mappers";
+import { CompletedTask, Task } from "../types/models";
+import { mapCompletedTask, mapTask } from "../utils/mappers";
 
 export const addTask = async (
   homeId: string,
   title: string,
   points: number,
-  createdBy: string
+  createdBy: string,
+  frequency: "once" | "daily" | "weekly" = "once"
 ): Promise<string> => {
   try {
     const { data, error } = await supabase
@@ -16,6 +17,7 @@ export const addTask = async (
         title,
         points,
         status: "open",
+        frequency,
         created_by: createdBy,
         completed_by: null,
         completed_at: null,
@@ -26,6 +28,26 @@ export const addTask = async (
     return data.id as string;
   } catch {
     throw new Error("Failed to create task. Please try again.");
+  }
+};
+
+export const fetchCompletedTasks = async (
+  homeId: string
+): Promise<CompletedTask[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*, completer:users!completed_by(name)")
+      .eq("home_id", homeId)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return (data ?? []).map((row) =>
+      mapCompletedTask(row as Record<string, unknown>)
+    );
+  } catch {
+    throw new Error("Failed to load task history.");
   }
 };
 

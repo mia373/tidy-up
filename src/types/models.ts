@@ -12,6 +12,8 @@ export interface AppUser {
   email: string;
   homeId: string | null;
   points: number;
+  streak: number;
+  lastStreakDate: string | null;
   createdAt: string;
 }
 
@@ -21,10 +23,15 @@ export interface Task {
   title: string;
   points: number;
   status: "open" | "completed";
+  frequency: "once" | "daily" | "weekly";
   createdBy: string;
   completedBy: string | null;
   completedAt: string | null;
   createdAt: string;
+}
+
+export interface CompletedTask extends Task {
+  completerName: string | null;
 }
 
 export type AuthStackParamList = {
@@ -36,4 +43,6 @@ export type MainTabParamList = {
   Tasks: undefined;
   AddTask: undefined;
   Leaderboard: undefined;
+  History: undefined;
+  Settings: undefined;
 };

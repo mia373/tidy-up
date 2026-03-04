@@ -4,6 +4,8 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  View,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -13,6 +15,14 @@ import { addTask } from "../services/tasks";
 import { useAuthStore } from "../store/useAuthStore";
 import { MainTabParamList } from "../types/models";
 
+type Frequency = "once" | "daily" | "weekly";
+
+const FREQUENCIES: { value: Frequency; label: string; emoji: string }[] = [
+  { value: "once", label: "Once", emoji: "1️⃣" },
+  { value: "daily", label: "Daily", emoji: "🔁" },
+  { value: "weekly", label: "Weekly", emoji: "📅" },
+];
+
 type Props = {
   navigation: BottomTabNavigationProp<MainTabParamList, "AddTask">;
 };
@@ -21,6 +31,7 @@ export default function AddTaskScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const [title, setTitle] = useState("");
   const [pointsText, setPointsText] = useState("");
+  const [frequency, setFrequency] = useState<Frequency>("once");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -36,9 +47,10 @@ export default function AddTaskScreen({ navigation }: Props) {
     if (!user?.homeId) return;
     try {
       setLoading(true);
-      await addTask(user.homeId, title.trim(), points, user.id);
+      await addTask(user.homeId, title.trim(), points, user.id, frequency);
       setTitle("");
       setPointsText("");
+      setFrequency("once");
       navigation.navigate("Tasks");
     } catch (error) {
       Alert.alert(
@@ -68,6 +80,30 @@ export default function AddTaskScreen({ navigation }: Props) {
         onChangeText={setPointsText}
         keyboardType="number-pad"
       />
+      <Text style={styles.freqLabel}>Repeats</Text>
+      <View style={styles.freqRow}>
+        {FREQUENCIES.map((f) => (
+          <TouchableOpacity
+            key={f.value}
+            style={[
+              styles.freqBtn,
+              frequency === f.value && styles.freqBtnActive,
+            ]}
+            onPress={() => setFrequency(f.value)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.freqEmoji}>{f.emoji}</Text>
+            <Text
+              style={[
+                styles.freqText,
+                frequency === f.value && styles.freqTextActive,
+              ]}
+            >
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <PrimaryButton title="Create Task" onPress={handleCreate} loading={loading} />
     </SafeAreaView>
   );
@@ -97,5 +133,45 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
     ...shadow,
+  },
+  freqLabel: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.text,
+    opacity: 0.5,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  freqRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  freqBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.border,
+    borderRadius: 16,
+    ...shadow,
+  },
+  freqBtnActive: {
+    backgroundColor: colors.accent,
+  },
+  freqEmoji: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  freqText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+    opacity: 0.6,
+  },
+  freqTextActive: {
+    opacity: 1,
   },
 });

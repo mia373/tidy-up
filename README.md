@@ -88,7 +88,7 @@ EAS will build in the cloud and give you a download link or push to TestFlight.
 ├── navigation/           # Auth gate + tab navigator
 ├── screens/              # One file per screen
 ├── components/           # Reusable UI pieces
-├── services/             # Supabase calls (auth, tasks, homes, leaderboard)
+├── services/             # Supabase calls (auth, tasks, homes, leaderboard, settings)
 ├── store/                # Zustand state
 ├── hooks/                # Custom React hooks
 ├── types/                # TypeScript interfaces
@@ -108,13 +108,15 @@ EAS will build in the cloud and give you a download link or push to TestFlight.
 
 The MVP includes: email auth, home creation/joining via invite code, task CRUD, point tracking, and a leaderboard. That's it — intentionally small to ship fast.
 
-## Post-MVP Roadmap
+## Post-MVP Features
 
-- Push notifications for new tasks
-- Task reminders and recurring tasks
-- Streak system (consecutive days of completing tasks)
-- AI task suggestions
-- Apple Watch widget
+These features have been implemented beyond the MVP:
+
+- **Push notifications** — alerts for new tasks (expo-notifications)
+- **Recurring tasks** — frequency field with automatic reopen logic
+- **Streak tracking** — consecutive days of completing tasks
+- **Task history screen** — view all completed tasks
+- **Settings screen** — leave home, change display name
 
 ## License
 
