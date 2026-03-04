@@ -1,8 +1,8 @@
 // Architecture: Supabase Edge Function (supabase/functions/generate-tasks/index.ts)
-// The Anthropic API key is stored as a Supabase secret and never shipped in the app bundle.
+// The Gemini API key is stored as a Supabase secret and never shipped in the app bundle.
 // This client calls supabase.functions.invoke(), which automatically attaches the user's JWT.
-// To deploy the function: supabase functions deploy generate-tasks
-// To set the secret:      supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+// To deploy: supabase functions deploy generate-tasks --no-verify-jwt
+// To set the secret: supabase secrets set GEMINI_API_KEY=your-google-ai-studio-key
 
 import { supabase } from "./supabase";
 import { SuggestedTask } from "../types/models";

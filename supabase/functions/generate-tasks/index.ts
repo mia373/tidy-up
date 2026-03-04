@@ -1,7 +1,8 @@
 // Supabase Edge Function — generate-tasks
-// Uses plain fetch() to call the Gemini API — no npm imports needed.
+// Calls Gemini 2.5 Flash Lite via plain fetch() — no npm imports needed.
+// JWT verification must be OFF (Edge Functions → Settings → Verify JWT).
 // Secrets required (Edge Functions → Manage secrets):
-//   GEMINI_API_KEY  — your Google AI Studio API key
+//   GEMINI_API_KEY  — Google AI Studio key (aistudio.google.com, free tier available)
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 
 const CORS_HEADERS = {
