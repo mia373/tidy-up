@@ -1,9 +1,15 @@
+export type HomeType = 'apartment' | 'house' | 'dorm' | 'studio';
+
 export interface Home {
   id: string;
   name: string;
   inviteCode: string;
   members: string[];
   createdAt: string;
+  homeType: HomeType | null;
+  rooms: string[];
+  hasPets: boolean;
+  memberCount: number;
 }
 
 export interface AppUser {
