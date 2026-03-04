@@ -28,6 +28,10 @@ export default function LoginScreen({ navigation }: Props) {
       Alert.alert("Error", "Please enter your email and password.");
       return;
     }
+    if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      Alert.alert("Error", "Please enter a valid email address.");
+      return;
+    }
     try {
       setLoading(true);
       await signIn(email.trim(), password);

@@ -62,7 +62,7 @@ export default function LeaderboardScreen() {
               <Text style={styles.emptyText}>No members yet.</Text>
             </View>
           }
-          contentContainerStyle={members.length === 0 && styles.emptyContainer}
+          contentContainerStyle={members.length === 0 ? styles.emptyContainer : undefined}
           showsVerticalScrollIndicator={false}
         />
       )}

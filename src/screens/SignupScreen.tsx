@@ -33,6 +33,10 @@ export default function SignupScreen({ navigation }: Props) {
       Alert.alert("Error", "Please enter your email.");
       return;
     }
+    if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      Alert.alert("Error", "Please enter a valid email address.");
+      return;
+    }
     if (password.length < 6) {
       Alert.alert("Error", "Password must be at least 6 characters.");
       return;
