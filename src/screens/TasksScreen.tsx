@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing } from "../theme";
+import { colors, spacing, shadow } from "../theme";
 import { TaskCard } from "../components/TaskCard";
 import { useTasks } from "../hooks/useTasks";
 import { completeTask } from "../services/tasks";
@@ -52,15 +52,26 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Tasks 🌸</Text>
-        <TouchableOpacity onPress={handleSignOut}>
-          <Text style={styles.signOut}>Sign out</Text>
-        </TouchableOpacity>
+        <View>
+          <Text style={styles.title}>Tasks ✏️</Text>
+          {user && (
+            <Text style={styles.subtitle}>hey, {user.name}!</Text>
+          )}
+        </View>
+        <View style={styles.headerRight}>
+          <View style={styles.pointsBadge}>
+            <Text style={styles.pointsBadgeText}>⭐ {user?.points ?? 0}</Text>
+          </View>
+          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+            <Text style={styles.signOutText}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
       {loading ? (
         <ActivityIndicator
           size="large"
-          color={colors.primary}
+          color={colors.border}
           style={styles.loader}
         />
       ) : (
@@ -76,13 +87,16 @@ export default function TasksScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>🫧 No open tasks.</Text>
+              <Text style={styles.emptyEmoji}>🫧</Text>
+              <Text style={styles.emptyText}>No open tasks!</Text>
               <Text style={styles.emptySubtext}>
-                Add a task using the Add Task tab.
+                Add one from the Add Task tab.
               </Text>
             </View>
           }
-          contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : undefined}
+          contentContainerStyle={
+            tasks.length === 0 ? styles.emptyContainer : styles.list
+          }
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -98,34 +112,75 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
+    fontSize: 32,
+    fontWeight: "900",
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.text,
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  headerRight: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  pointsBadge: {
+    backgroundColor: colors.accent,
+    borderWidth: 2.5,
+    borderColor: colors.border,
+    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    ...shadow,
+  },
+  pointsBadgeText: {
+    fontSize: 14,
+    fontWeight: "800",
     color: colors.text,
   },
-  signOut: {
-    fontSize: 14,
-    color: colors.muted,
+  signOutBtn: {
+    paddingHorizontal: 2,
+  },
+  signOutText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text,
+    opacity: 0.45,
+    textDecorationLine: "underline",
   },
   loader: {
     marginTop: spacing.xl,
   },
+  list: {
+    paddingBottom: spacing.lg,
+  },
   empty: {
     alignItems: "center",
   },
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.sm,
+  },
   emptyText: {
-    fontSize: 17,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "800",
     color: colors.text,
     marginBottom: spacing.xs,
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.muted,
+    fontWeight: "600",
+    color: colors.text,
+    opacity: 0.55,
   },
   emptyContainer: {
     flex: 1,

@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Task } from "../types/models";
 import { PrimaryButton } from "./PrimaryButton";
-import { colors, spacing } from "../theme";
+import { colors, spacing, shadow } from "../theme";
 
 interface TaskCardProps {
   task: Task;
@@ -20,7 +20,7 @@ export function TaskCard({ task, onComplete, loading }: TaskCardProps) {
         </View>
       </View>
       <PrimaryButton
-        title="Done"
+        title="Done ✓"
         onPress={() => onComplete(task.id, task.points)}
         loading={loading}
         small
@@ -36,15 +36,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: colors.surface,
     padding: spacing.md,
-    borderRadius: 16,
-    marginBottom: spacing.sm,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.accent,
-    shadowColor: "#E88FAB",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    ...shadow,
   },
   info: {
     flex: 1,
@@ -52,20 +48,22 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: colors.text,
+    marginBottom: spacing.xs,
   },
   pointsBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFF0F5",
+    backgroundColor: colors.accent,
     borderRadius: 50,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   points: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: "600",
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: "800",
   },
 });

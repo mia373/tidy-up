@@ -27,5 +27,5 @@ export function useAuthListener() {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setUser, setLoading]);
 }

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   StyleSheet,
@@ -71,7 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
         style={styles.link}
         onPress={() => navigation.navigate("Signup")}
       >
-        <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+        <Text style={styles.linkText}>Don&apos;t have an account? Sign up</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

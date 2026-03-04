@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { colors, spacing } from "../theme";
+import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addTask } from "../services/tasks";
 import { useAuthStore } from "../store/useAuthStore";
@@ -52,10 +52,10 @@ export default function AddTaskScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Add Task</Text>
+      <Text style={styles.title}>Add Task ✏️</Text>
       <TextInput
         style={styles.input}
-        placeholder="Task name"
+        placeholder="What needs doing?"
         placeholderTextColor={colors.muted}
         value={title}
         onChangeText={setTitle}
@@ -80,19 +80,22 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "700",
+    fontSize: 32,
+    fontWeight: "900",
     color: colors.text,
+    letterSpacing: -0.5,
     marginBottom: spacing.xl,
   },
   input: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 3,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: spacing.md,
     fontSize: 16,
+    fontWeight: "600",
     color: colors.text,
     marginBottom: spacing.md,
+    ...shadow,
   },
 });

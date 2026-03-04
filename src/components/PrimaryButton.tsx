@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { colors } from "../theme";
+import { colors, shadow } from "../theme";
 
 interface PrimaryButtonProps {
   title: string;
@@ -31,7 +31,7 @@ export function PrimaryButton({
       ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
     >
       {loading ? (
         <ActivityIndicator color="#fff" size="small" />
@@ -46,30 +46,29 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     borderRadius: 50,
+    borderWidth: 3,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
+    ...shadow,
   },
   small: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 50,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   text: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   smallText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "700",
   },
 });
