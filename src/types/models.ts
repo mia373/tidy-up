@@ -40,6 +40,12 @@ export interface CompletedTask extends Task {
   completerName: string | null;
 }
 
+export interface SuggestedTask {
+  title: string;
+  points: number;
+  room: string;
+}
+
 export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;

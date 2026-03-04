@@ -56,7 +56,28 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_publishable_key
 ```
 
-### 4. Run in Expo Go
+### 4. Deploy the AI Edge Function
+
+The AI task generation feature uses a Supabase Edge Function. One-time setup:
+
+```bash
+# Install Supabase CLI if you haven't already
+npm install -g supabase
+
+# Log in and link to your project
+supabase login
+supabase link --project-ref your-project-ref
+
+# Set the Anthropic API key as a secret (never goes in .env)
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+
+# Deploy the function
+supabase functions deploy generate-tasks
+```
+
+> Skip this step if you're not using the AI task generation feature yet.
+
+### 5. Run in Expo Go
 
 ```bash
 npx expo start
@@ -64,7 +85,7 @@ npx expo start
 
 Scan the QR code with Expo Go — Supabase Auth works fully in Expo Go with no native build required.
 
-### 5. Build for iOS (App Store / TestFlight)
+### 6. Build for iOS (App Store / TestFlight)
 
 ```bash
 # Login to Expo

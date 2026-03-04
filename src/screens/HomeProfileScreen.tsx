@@ -7,11 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { updateHomeProfile } from "../services/homes";
+import { generateTasks } from "../services/ai";
 import { useAuthStore } from "../store/useAuthStore";
 import { HomeType } from "../types/models";
 
@@ -36,12 +38,13 @@ const DEFAULT_ROOMS = [
 export default function HomeProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const setNeedsHomeProfile = useAuthStore((s) => s.setNeedsHomeProfile);
+  const setSuggestedTasks = useAuthStore((s) => s.setSuggestedTasks);
 
   const [homeType, setHomeType] = useState<HomeType | null>(null);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [customRoom, setCustomRoom] = useState("");
   const [hasPets, setHasPets] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const toggleRoom = (room: string) => {
     setSelectedRooms((prev) =>
@@ -62,14 +65,15 @@ export default function HomeProfileScreen() {
   const handleSave = async () => {
     if (!user?.homeId) return;
     try {
-      setSaving(true);
+      setGenerating(true);
       await updateHomeProfile(user.homeId, { homeType, rooms: selectedRooms, hasPets });
-      // Phase 9.3+ will navigate to generation here; for now go straight to main tabs
+      const tasks = await generateTasks(user.homeId);
+      setSuggestedTasks(tasks);
       setNeedsHomeProfile(false);
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Something went wrong");
     } finally {
-      setSaving(false);
+      setGenerating(false);
     }
   };
 
@@ -78,6 +82,16 @@ export default function HomeProfileScreen() {
     ...DEFAULT_ROOMS,
     ...selectedRooms.filter((r) => !DEFAULT_ROOMS.includes(r)),
   ];
+
+  if (generating) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Thinking about your chores... ✨</Text>
+        <Text style={styles.loadingSubtext}>This takes a few seconds</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -163,7 +177,7 @@ export default function HomeProfileScreen() {
         </View>
 
         <View style={styles.cta}>
-          <PrimaryButton title="✨  Generate Tasks" onPress={handleSave} loading={saving} />
+          <PrimaryButton title="✨  Generate Tasks" onPress={handleSave} loading={false} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -310,5 +324,21 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.xl,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: colors.muted,
   },
 });

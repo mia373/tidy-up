@@ -133,3 +133,11 @@ alter table homes add column if not exists has_pets   boolean not null default f
 -- member_count: auto-derived from the members array length as a stored generated column
 alter table homes add column if not exists member_count int
   generated always as (coalesce(array_length(members, 1), 0)) stored;
+
+-- ============================================================
+-- PHASE 9.3/9.4 MIGRATIONS — AI rate limiting columns
+-- ============================================================
+
+-- Track how many times AI task generation has been triggered today per home
+alter table homes add column if not exists ai_requests_today   int  not null default 0;
+alter table homes add column if not exists ai_requests_reset_at date;
