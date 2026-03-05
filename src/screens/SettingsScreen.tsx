@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,38 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
+  Share,
+  ScrollView,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { updateName, leaveHome } from "../services/settings";
+import { fetchHome } from "../services/homes";
 import { useAuthStore } from "../store/useAuthStore";
+import { useHomeStore } from "../store/useHomeStore";
 import { AppStackParamList } from "../types/models";
 
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const home = useHomeStore((s) => s.home);
+  const setHome = useHomeStore((s) => s.setHome);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [name, setName] = useState(user?.name ?? "");
   const [savingName, setSavingName] = useState(false);
   const [leavingHome, setLeavingHome] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Fetch home if not already in store (e.g. after create/join home)
+  useEffect(() => {
+    if (!home && user?.homeId) {
+      fetchHome(user.homeId).then(setHome).catch(() => {});
+    }
+  }, [home, user?.homeId, setHome]);
 
   const handleSaveName = async () => {
     if (!user) return;
@@ -45,6 +60,20 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleCopy = async () => {
+    if (!home?.inviteCode) return;
+    await Clipboard.setStringAsync(home.inviteCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShare = async () => {
+    if (!home?.inviteCode) return;
+    await Share.share({
+      message: `Join my home on TidyUp! Use invite code: ${home.inviteCode}`,
+    });
+  };
+
   const handleLeaveHome = () => {
     Alert.alert(
       "Leave Home?",
@@ -60,6 +89,7 @@ export default function SettingsScreen() {
               setLeavingHome(true);
               await leaveHome(user.id, user.homeId);
               setUser({ ...user, homeId: null });
+              setHome(null);
               navigation.navigate("HomeSetup");
             } catch (error) {
               Alert.alert(
@@ -75,60 +105,94 @@ export default function SettingsScreen() {
     );
   };
 
+  const spacedCode = home?.inviteCode.split("").join("  ") ?? "––––––";
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Settings ⚙️</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Settings ⚙️</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Display Name</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Your name"
-          placeholderTextColor={colors.muted}
-        />
-        <PrimaryButton
-          title="Save Name"
-          onPress={handleSaveName}
-          loading={savingName}
-        />
-      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Display Name</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            placeholderTextColor={colors.muted}
+          />
+          <PrimaryButton
+            title="Save Name"
+            onPress={handleSaveName}
+            loading={savingName}
+          />
+        </View>
 
-      <View style={styles.divider} />
+        <View style={styles.divider} />
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Home Profile</Text>
-        <Text style={styles.sectionHint}>
-          Update your home type, rooms, and pet info used for AI task generation.
-        </Text>
-        <TouchableOpacity
-          style={styles.editProfileBtn}
-          onPress={() => navigation.navigate("HomeProfile", { mode: "edit" })}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.editProfileBtnText}>Edit Home Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Home</Text>
-        <Text style={styles.sectionHint}>
-          Leaving removes you from the leaderboard and task board.
-        </Text>
-        <TouchableOpacity
-          style={[styles.leaveBtn, leavingHome && styles.leaveBtnDisabled]}
-          onPress={handleLeaveHome}
-          disabled={leavingHome}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.leaveBtnText}>
-            {leavingHome ? "Leaving…" : "Leave Home"}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Invite Code</Text>
+          <Text style={styles.sectionHint}>
+            Share this code so others can join your home.
           </Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.inviteCard}>
+            <Text style={styles.inviteCode}>{spacedCode}</Text>
+            <View style={styles.inviteActions}>
+              <TouchableOpacity
+                style={[styles.inviteBtn, copied && styles.inviteBtnCopied]}
+                onPress={handleCopy}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.inviteBtnText}>
+                  {copied ? "Copied!" : "Copy"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inviteBtn}
+                onPress={handleShare}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.inviteBtnText}>Share</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Home Profile</Text>
+          <Text style={styles.sectionHint}>
+            Update your home type, rooms, and pet info used for AI task generation.
+          </Text>
+          <TouchableOpacity
+            style={styles.editProfileBtn}
+            onPress={() => navigation.navigate("HomeProfile", { mode: "edit" })}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.editProfileBtnText}>Edit Home Profile</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Home</Text>
+          <Text style={styles.sectionHint}>
+            Leaving removes you from the leaderboard and task board.
+          </Text>
+          <TouchableOpacity
+            style={[styles.leaveBtn, leavingHome && styles.leaveBtnDisabled]}
+            onPress={handleLeaveHome}
+            disabled={leavingHome}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.leaveBtnText}>
+              {leavingHome ? "Leaving…" : "Leave Home"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -182,6 +246,45 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginBottom: spacing.lg,
     opacity: 0.15,
+  },
+  inviteCard: {
+    backgroundColor: colors.accent,
+    borderWidth: 3,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    borderRadius: 16,
+    padding: spacing.lg,
+    alignItems: "center",
+    gap: spacing.md,
+    ...shadow,
+  },
+  inviteCode: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: colors.text,
+    letterSpacing: 2,
+    fontVariant: ["tabular-nums"],
+  },
+  inviteActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  inviteBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 2.5,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    ...shadow,
+  },
+  inviteBtnCopied: {
+    backgroundColor: colors.success,
+  },
+  inviteBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.text,
   },
   editProfileBtn: {
     backgroundColor: colors.surface,
