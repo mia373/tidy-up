@@ -8,15 +8,18 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, spacing } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { createHome, joinHome } from "../services/homes";
 import { useAuthStore } from "../store/useAuthStore";
+import { AppStackParamList } from "../types/models";
 
 export default function HomeSetupScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
-  const setNeedsHomeProfile = useAuthStore((s) => s.setNeedsHomeProfile);
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   const [homeName, setHomeName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -32,8 +35,8 @@ export default function HomeSetupScreen() {
     try {
       setCreatingHome(true);
       const homeId = await createHome(homeName.trim(), user.id);
-      setNeedsHomeProfile(true);
       setUser({ ...user, homeId });
+      navigation.navigate("HomeProfile");
     } catch (error) {
       Alert.alert(
         "Error",
@@ -54,6 +57,7 @@ export default function HomeSetupScreen() {
       setJoiningHome(true);
       const homeId = await joinHome(inviteCode.trim(), user.id);
       setUser({ ...user, homeId });
+      navigation.replace("Main");
     } catch (error) {
       Alert.alert(
         "Error",

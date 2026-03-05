@@ -52,8 +52,9 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
+  HomeSetup: undefined;
   Main: undefined;
-  HomeProfile: undefined;
+  HomeProfile: { mode?: "edit" } | undefined;
   SuggestedTasks: { tasks: SuggestedTask[] };
 };
 

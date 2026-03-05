@@ -8,14 +8,18 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { updateName, leaveHome } from "../services/settings";
 import { useAuthStore } from "../store/useAuthStore";
+import { AppStackParamList } from "../types/models";
 
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [name, setName] = useState(user?.name ?? "");
   const [savingName, setSavingName] = useState(false);
   const [leavingHome, setLeavingHome] = useState(false);
@@ -56,6 +60,7 @@ export default function SettingsScreen() {
               setLeavingHome(true);
               await leaveHome(user.id, user.homeId);
               setUser({ ...user, homeId: null });
+              navigation.navigate("HomeSetup");
             } catch (error) {
               Alert.alert(
                 "Error",
@@ -88,6 +93,22 @@ export default function SettingsScreen() {
           onPress={handleSaveName}
           loading={savingName}
         />
+      </View>
+
+      <View style={styles.divider} />
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Home Profile</Text>
+        <Text style={styles.sectionHint}>
+          Update your home type, rooms, and pet info used for AI task generation.
+        </Text>
+        <TouchableOpacity
+          style={styles.editProfileBtn}
+          onPress={() => navigation.navigate("HomeProfile", { mode: "edit" })}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.editProfileBtnText}>Edit Home Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.divider} />
@@ -161,6 +182,21 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginBottom: spacing.lg,
     opacity: 0.15,
+  },
+  editProfileBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.border,
+    borderRadius: 50,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    ...shadow,
+  },
+  editProfileBtnText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "800",
   },
   leaveBtn: {
     backgroundColor: colors.error,

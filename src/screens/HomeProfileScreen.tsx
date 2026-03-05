@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { updateHomeProfile } from "../services/homes";
+import { updateHomeProfile, fetchHome } from "../services/homes";
 import { generateTasks } from "../services/ai";
 import { useAuthStore } from "../store/useAuthStore";
 import { AppStackParamList, HomeType } from "../types/models";
@@ -38,14 +38,33 @@ const DEFAULT_ROOMS = [
   "Office",
 ];
 
-export default function HomeProfileScreen({ navigation }: Props) {
+export default function HomeProfileScreen({ navigation, route }: Props) {
   const user = useAuthStore((s) => s.user);
+  const isEditMode = route.params?.mode === "edit";
 
+  const [homeName, setHomeName] = useState("");
   const [homeType, setHomeType] = useState<HomeType | null>(null);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [customRoom, setCustomRoom] = useState("");
   const [hasPets, setHasPets] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(isEditMode);
+
+  // In edit mode, pre-fill the form with the current home profile from the DB.
+  useEffect(() => {
+    if (!isEditMode || !user?.homeId) return;
+    fetchHome(user.homeId)
+      .then((home) => {
+        setHomeName(home.name);
+        setHomeType(home.homeType);
+        setSelectedRooms(home.rooms);
+        setHasPets(home.hasPets);
+      })
+      .catch(() => {
+        Alert.alert("Error", "Failed to load home profile.");
+      })
+      .finally(() => setLoadingProfile(false));
+  }, [isEditMode, user?.homeId]);
 
   const toggleRoom = (room: string) => {
     setSelectedRooms((prev) =>
@@ -65,11 +84,25 @@ export default function HomeProfileScreen({ navigation }: Props) {
 
   const handleSave = async () => {
     if (!user?.homeId) return;
+    if (isEditMode && !homeName.trim()) {
+      Alert.alert("Error", "Home name cannot be empty.");
+      return;
+    }
     try {
       setGenerating(true);
-      await updateHomeProfile(user.homeId, { homeType, rooms: selectedRooms, hasPets });
-      const tasks = await generateTasks(user.homeId);
-      navigation.replace("SuggestedTasks", { tasks });
+      await updateHomeProfile(user.homeId, {
+        homeType,
+        rooms: selectedRooms,
+        hasPets,
+        ...(isEditMode ? { name: homeName.trim() } : {}),
+      });
+      if (isEditMode) {
+        Alert.alert("Saved!", "Your home profile has been updated.");
+        navigation.goBack();
+      } else {
+        const tasks = await generateTasks(user.homeId);
+        navigation.replace("SuggestedTasks", { tasks });
+      }
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Something went wrong");
     } finally {
@@ -83,7 +116,15 @@ export default function HomeProfileScreen({ navigation }: Props) {
     ...selectedRooms.filter((r) => !DEFAULT_ROOMS.includes(r)),
   ];
 
-  if (generating) {
+  if (loadingProfile) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (generating && !isEditMode) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -96,10 +137,29 @@ export default function HomeProfileScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Tell us about your home</Text>
-        <Text style={styles.subtitle}>
-          We'll use this to suggest the right chores for you.
+        <Text style={styles.title}>
+          {isEditMode ? "Edit home profile" : "Tell us about your home"}
         </Text>
+        <Text style={styles.subtitle}>
+          {isEditMode
+            ? "Update your home details. Changes apply to future task generation."
+            : "We'll use this to suggest the right chores for you."}
+        </Text>
+
+        {/* Home name — edit mode only */}
+        {isEditMode && (
+          <>
+            <Text style={styles.sectionLabel}>Home name</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={homeName}
+              onChangeText={setHomeName}
+              placeholder="e.g. The Smith House"
+              placeholderTextColor={colors.muted}
+              maxLength={40}
+            />
+          </>
+        )}
 
         {/* Home type */}
         <Text style={styles.sectionLabel}>Home type</Text>
@@ -177,7 +237,11 @@ export default function HomeProfileScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.cta}>
-          <PrimaryButton title="✨  Generate Tasks" onPress={handleSave} loading={false} />
+          <PrimaryButton
+            title={isEditMode ? "Save Changes" : "✨  Generate Tasks"}
+            onPress={handleSave}
+            loading={generating}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -210,6 +274,18 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
+  },
+  nameInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: spacing.lg,
   },
   typeGrid: {
     flexDirection: "row",

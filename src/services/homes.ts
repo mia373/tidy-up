@@ -45,7 +45,7 @@ export const fetchHome = async (homeId: string): Promise<Home> => {
 
 export const updateHomeProfile = async (
   homeId: string,
-  profile: { homeType: HomeType | null; rooms: string[]; hasPets: boolean }
+  profile: { homeType: HomeType | null; rooms: string[]; hasPets: boolean; name?: string }
 ): Promise<void> => {
   try {
     const { error } = await supabase
@@ -54,6 +54,7 @@ export const updateHomeProfile = async (
         home_type: profile.homeType,
         rooms: profile.rooms,
         has_pets: profile.hasPets,
+        ...(profile.name !== undefined ? { name: profile.name } : {}),
       })
       .eq("id", homeId);
     if (error) throw error;

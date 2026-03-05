@@ -1,36 +1,27 @@
-import React, { useEffect } from "react";
+import React, { useRef } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { AppStackParamList } from "../types/models";
 import { useAuthStore } from "../store/useAuthStore";
 import MainNavigator from "./MainNavigator";
 import HomeProfileScreen from "../screens/HomeProfileScreen";
 import SuggestedTasksScreen from "../screens/SuggestedTasksScreen";
+import HomeSetupScreen from "../screens/HomeSetupScreen";
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
-// Thin wrapper so the Zustand `needsHomeProfile` flag (set by HomeSetupScreen
-// after creating a home) can trigger a navigation push to HomeProfileScreen.
-function MainWithProfileCheck({
-  navigation,
-}: NativeStackScreenProps<AppStackParamList, "Main">) {
-  const needsHomeProfile = useAuthStore((s) => s.needsHomeProfile);
-  const setNeedsHomeProfile = useAuthStore((s) => s.setNeedsHomeProfile);
-
-  useEffect(() => {
-    if (needsHomeProfile) {
-      setNeedsHomeProfile(false);
-      navigation.navigate("HomeProfile");
-    }
-  }, [needsHomeProfile, navigation, setNeedsHomeProfile]);
-
-  return <MainNavigator />;
-}
-
 export default function AppNavigator() {
+  const user = useAuthStore((s) => s.user);
+  const initialRoute = useRef<keyof AppStackParamList>(
+    user?.homeId ? "Main" : "HomeSetup"
+  ).current;
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Main" component={MainWithProfileCheck} />
+    <Stack.Navigator
+      initialRouteName={initialRoute}
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="HomeSetup" component={HomeSetupScreen} />
+      <Stack.Screen name="Main" component={MainNavigator} />
       <Stack.Screen
         name="HomeProfile"
         component={HomeProfileScreen}

@@ -1,42 +1,64 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addTasksBatch } from "../services/tasks";
+import { generateTasksForRoom } from "../services/ai";
 import { useAuthStore } from "../store/useAuthStore";
 import { AppStackParamList } from "../types/models";
 
 type Props = NativeStackScreenProps<AppStackParamList, "SuggestedTasks">;
 
 interface EditableTask {
+  key: string; // stable unique ID for mutation — not index-based
   title: string;
   points: string;
   room: string;
   selected: boolean;
 }
 
+interface Section {
+  room: string;
+  data: EditableTask[];
+}
+
 export default function SuggestedTasksScreen({ navigation, route }: Props) {
   const user = useAuthStore((s) => s.user);
 
   const [tasks, setTasks] = useState<EditableTask[]>(() =>
-    route.params.tasks.map((t) => ({
+    route.params.tasks.map((t, i) => ({
+      key: `${t.room}-${i}`,
       title: t.title,
       points: String(t.points),
       room: t.room,
       selected: true,
     }))
   );
+
+  // Track original room order so sections don't jump around after re-roll
+  const [roomOrder] = useState<string[]>(() => [
+    ...new Set(route.params.tasks.map((t) => t.room)),
+  ]);
+
   const [saving, setSaving] = useState(false);
+  const [regeneratingRoom, setRegeneratingRoom] = useState<string | null>(null);
+
+  const sections: Section[] = useMemo(() => {
+    return roomOrder
+      .map((room) => ({ room, data: tasks.filter((t) => t.room === room) }))
+      .filter((s) => s.data.length > 0);
+  }, [tasks, roomOrder]);
 
   const selectedCount = tasks.filter((t) => t.selected).length;
   const allSelected = tasks.length > 0 && selectedCount === tasks.length;
@@ -45,24 +67,50 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
     setTasks((prev) => prev.map((t) => ({ ...t, selected: !allSelected })));
   };
 
-  const toggleSelect = (index: number) => {
-    setTasks((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], selected: !next[index].selected };
-      return next;
-    });
+  const toggleSelect = (key: string) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.key === key ? { ...t, selected: !t.selected } : t))
+    );
   };
 
-  const updateTask = (index: number, field: "title" | "points", value: string) => {
-    setTasks((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
-      return next;
-    });
+  const updateTask = (key: string, field: "title" | "points", value: string) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.key === key ? { ...t, [field]: value } : t))
+    );
   };
 
-  const deleteTask = (index: number) => {
-    setTasks((prev) => prev.filter((_, i) => i !== index));
+  const deleteTask = (key: string) => {
+    setTasks((prev) => prev.filter((t) => t.key !== key));
+  };
+
+  const regenerateRoom = async (room: string) => {
+    if (!user?.homeId) return;
+    setRegeneratingRoom(room);
+    try {
+      const newRawTasks = await generateTasksForRoom(user.homeId, room);
+      // Normalize room field and deduplicate against tasks from other rooms in the review list
+      const otherTitles = new Set(
+        tasks.filter((t) => t.room !== room).map((t) => t.title.toLowerCase())
+      );
+      const filtered = newRawTasks
+        .map((t) => ({ ...t, room })) // normalize room casing to match original
+        .filter((t) => !otherTitles.has(t.title.toLowerCase()));
+      const newEditable: EditableTask[] = filtered.map((t, i) => ({
+        key: `${room}-regen-${Date.now()}-${i}`,
+        title: t.title,
+        points: String(t.points),
+        room: t.room,
+        selected: true,
+      }));
+      setTasks((prev) => [
+        ...prev.filter((t) => t.room !== room),
+        ...newEditable,
+      ]);
+    } catch (error) {
+      Alert.alert("Error", error instanceof Error ? error.message : "Something went wrong");
+    } finally {
+      setRegeneratingRoom(null);
+    }
   };
 
   const handleConfirm = async () => {
@@ -90,11 +138,11 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
     }
   };
 
-  const renderItem = ({ item, index }: { item: EditableTask; index: number }) => (
+  const renderItem = ({ item }: { item: EditableTask }) => (
     <View style={[styles.card, !item.selected && styles.cardDimmed]}>
       <TouchableOpacity
         style={[styles.checkbox, item.selected && styles.checkboxSelected]}
-        onPress={() => toggleSelect(index)}
+        onPress={() => toggleSelect(item.key)}
         activeOpacity={0.8}
       >
         {item.selected && <Text style={styles.checkmark}>✓</Text>}
@@ -104,29 +152,53 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
         <TextInput
           style={styles.titleInput}
           value={item.title}
-          onChangeText={(v) => updateTask(index, "title", v)}
+          onChangeText={(v) => updateTask(item.key, "title", v)}
           maxLength={80}
           placeholderTextColor={colors.muted}
         />
-        <View style={styles.cardMeta}>
-          <View style={styles.roomChip}>
-            <Text style={styles.roomChipText}>{item.room}</Text>
-          </View>
-          <View style={styles.pointsRow}>
-            <TextInput
-              style={styles.pointsInput}
-              value={item.points}
-              onChangeText={(v) => updateTask(index, "points", v.replace(/[^0-9]/g, ""))}
-              keyboardType="numeric"
-              maxLength={3}
-            />
-            <Text style={styles.pointsLabel}>pts</Text>
-          </View>
+        <View style={styles.pointsRow}>
+          <TextInput
+            style={styles.pointsInput}
+            value={item.points}
+            onChangeText={(v) => updateTask(item.key, "points", v.replace(/[^0-9]/g, ""))}
+            keyboardType="numeric"
+            maxLength={3}
+          />
+          <Text style={styles.pointsLabel}>pts</Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteTask(index)} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.deleteBtn}
+        onPress={() => deleteTask(item.key)}
+        activeOpacity={0.8}
+      >
         <Text style={styles.deleteBtnText}>✕</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderSectionHeader = ({ section }: { section: Section }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.room}</Text>
+      <TouchableOpacity
+        style={styles.regenBtn}
+        onPress={() => regenerateRoom(section.room)}
+        disabled={regeneratingRoom !== null}
+        activeOpacity={0.7}
+      >
+        {regeneratingRoom === section.room ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Text
+            style={[
+              styles.regenBtnText,
+              regeneratingRoom !== null && styles.regenBtnTextDisabled,
+            ]}
+          >
+            ↺ Re-roll
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -139,16 +211,20 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
           <Text style={styles.subtitle}>{tasks.length} suggestions for your home</Text>
         </View>
         <TouchableOpacity onPress={toggleSelectAll} activeOpacity={0.8}>
-          <Text style={styles.selectAllText}>{allSelected ? "Deselect all" : "Select all"}</Text>
+          <Text style={styles.selectAllText}>
+            {allSelected ? "Deselect all" : "Select all"}
+          </Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={tasks}
-        keyExtractor={(_, i) => String(i)}
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.key}
         renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled={false}
       />
 
       <View style={styles.footer}>
@@ -194,7 +270,39 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-    gap: spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.text,
+    opacity: 0.5,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  regenBtn: {
+    minWidth: 60,
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  regenBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  regenBtnTextDisabled: {
+    color: colors.muted,
   },
   card: {
     flexDirection: "row",
@@ -205,6 +313,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.sm,
     gap: spacing.sm,
+    marginBottom: spacing.sm,
     ...shadow,
   },
   cardDimmed: {
@@ -238,24 +347,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     padding: 0,
-  },
-  cardMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  roomChip: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  roomChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.text,
   },
   pointsRow: {
     flexDirection: "row",
