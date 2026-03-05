@@ -147,3 +147,77 @@ alter table homes add column if not exists ai_requests_reset_at date;
 -- ============================================================
 
 alter table tasks add column if not exists room text default null;
+
+-- ============================================================
+-- PHASE 10.4 MIGRATIONS — Points Over Time Analytics
+-- ============================================================
+
+-- point_events: one row per task completion (logs every point-earning event)
+create table if not exists point_events (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references users(id) on delete cascade,
+  home_id    uuid not null references homes(id) on delete cascade,
+  points     int not null,
+  task_id    uuid references tasks(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+-- RLS: authenticated users can read/insert events in their home
+alter table point_events enable row level security;
+create policy "point_events_select" on point_events for select to authenticated using (true);
+create policy "point_events_insert" on point_events for insert to authenticated with check (true);
+
+-- Add to Realtime publication
+alter publication supabase_realtime add table point_events;
+
+-- Update complete_task RPC to also insert a point_events row
+create or replace function complete_task(
+  p_task_id  uuid,
+  p_user_id  uuid,
+  p_points   int
+)
+returns void
+language plpgsql
+security definer
+as $$
+declare
+  v_task tasks%rowtype;
+begin
+  -- Lock and fetch the task
+  select * into v_task
+  from tasks
+  where id = p_task_id and status = 'open';
+
+  if not found then
+    raise exception 'Task not found or already completed';
+  end if;
+
+  -- Mark the task completed
+  update tasks
+  set status       = 'completed',
+      completed_by = p_user_id,
+      completed_at = now()
+  where id = p_task_id;
+
+  -- Award points + update streak
+  update users
+  set points          = points + p_points,
+      streak          = case
+                          when last_streak_date = current_date     then streak
+                          when last_streak_date = current_date - 1 then streak + 1
+                          else 1
+                        end,
+      last_streak_date = current_date
+  where id = p_user_id;
+
+  -- Log the point-earning event for analytics
+  insert into point_events (user_id, home_id, points, task_id)
+  values (p_user_id, v_task.home_id, p_points, p_task_id);
+
+  -- Re-open recurring tasks by inserting a fresh open copy
+  if v_task.frequency != 'once' then
+    insert into tasks (home_id, title, points, status, frequency, created_by)
+    values (v_task.home_id, v_task.title, v_task.points, 'open', v_task.frequency, v_task.created_by);
+  end if;
+end;
+$$;
