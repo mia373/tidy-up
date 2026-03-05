@@ -5,6 +5,7 @@ import {
   TextInput,
   StyleSheet,
   SectionList,
+  ScrollView,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
@@ -16,7 +17,16 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { addTasksBatch } from "../services/tasks";
 import { generateTasksForRoom } from "../services/ai";
 import { useAuthStore } from "../store/useAuthStore";
+import { useHomeMembers } from "../hooks/useHomeMembers";
 import { AppStackParamList } from "../types/models";
+
+const AVATAR_COLORS = ["#548BF8", "#FF6B6B", "#68D368", "#F97316", "#A855F7", "#EC4899"];
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 type Props = NativeStackScreenProps<AppStackParamList, "SuggestedTasks">;
 
@@ -26,6 +36,7 @@ interface EditableTask {
   points: string;
   room: string;
   selected: boolean;
+  assignedTo: string | null;
 }
 
 interface Section {
@@ -35,6 +46,7 @@ interface Section {
 
 export default function SuggestedTasksScreen({ navigation, route }: Props) {
   const user = useAuthStore((s) => s.user);
+  const members = useHomeMembers(user?.homeId ?? null);
 
   const [tasks, setTasks] = useState<EditableTask[]>(() =>
     route.params.tasks.map((t, i) => ({
@@ -43,6 +55,7 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
       points: String(t.points),
       room: t.room,
       selected: true,
+      assignedTo: null,
     }))
   );
 
@@ -70,6 +83,12 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
   const toggleSelect = (key: string) => {
     setTasks((prev) =>
       prev.map((t) => (t.key === key ? { ...t, selected: !t.selected } : t))
+    );
+  };
+
+  const setTaskAssignee = (key: string, userId: string | null) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.key === key ? { ...t, assignedTo: userId } : t))
     );
   };
 
@@ -101,11 +120,20 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
         points: String(t.points),
         room: t.room,
         selected: true,
+        assignedTo: null,
       }));
-      setTasks((prev) => [
-        ...prev.filter((t) => t.room !== room),
-        ...newEditable,
-      ]);
+      setTasks((prev) => {
+        const prevAssignments = Object.fromEntries(
+          prev.filter((t) => t.room === room).map((t) => [t.key, t.assignedTo])
+        );
+        return [
+          ...prev.filter((t) => t.room !== room),
+          ...newEditable.map((t, i) => ({
+            ...t,
+            assignedTo: prevAssignments[Object.keys(prevAssignments)[i]] ?? null,
+          })),
+        ];
+      });
     } catch (error) {
       Alert.alert("Error", error instanceof Error ? error.message : "Something went wrong");
     } finally {
@@ -126,6 +154,7 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
         title: t.title.trim(),
         points: Math.max(1, parseInt(t.points, 10) || 10),
         room: t.room || null,
+        assignedTo: t.assignedTo,
       }));
       const count = await addTasksBatch(payload, user.homeId, user.id);
       // 9.9.4 — track generated vs. kept for prompt tuning
@@ -167,6 +196,35 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
           />
           <Text style={styles.pointsLabel}>pts</Text>
         </View>
+        {members.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.assignRow}>
+              <TouchableOpacity
+                style={[styles.assignChip, !item.assignedTo && styles.assignChipActive]}
+                onPress={() => setTaskAssignee(item.key, null)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.assignChipText, !item.assignedTo && styles.assignChipTextActive]}>—</Text>
+              </TouchableOpacity>
+              {members.map((m, i) => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[
+                    styles.assignChip,
+                    { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] },
+                    item.assignedTo === m.id && styles.assignChipActive,
+                  ]}
+                  onPress={() => setTaskAssignee(item.key, m.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.assignChipText, styles.assignChipTextColored]}>
+                    {getInitials(m.name)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        )}
       </View>
 
       <TouchableOpacity
@@ -383,5 +441,35 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.bg,
+  },
+  assignRow: {
+    flexDirection: "row",
+    gap: 5,
+    marginTop: 4,
+  },
+  assignChip: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  assignChipActive: {
+    borderWidth: 3,
+    borderColor: colors.border,
+  },
+  assignChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.muted,
+  },
+  assignChipTextActive: {
+    color: colors.text,
+  },
+  assignChipTextColored: {
+    color: "#fff",
   },
 });

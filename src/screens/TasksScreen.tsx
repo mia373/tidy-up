@@ -55,6 +55,7 @@ export default function TasksScreen() {
   const { sortMode, setSortMode } = useTasksStore();
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
+  const [myTasksOnly, setMyTasksOnly] = useState(false);
   const { notifyTaskComplete } = useNotifications();
   const { triggerGeneration, generating } = useGenerateTasks();
 
@@ -104,12 +105,17 @@ export default function TasksScreen() {
     });
   }, []);
 
+  const visibleTasks = useMemo(
+    () => (myTasksOnly ? tasks.filter((t) => t.assignedTo === user?.id) : tasks),
+    [tasks, myTasksOnly, user?.id]
+  );
+
   const sections: Section[] = useMemo(() => {
     const roomMap = new Map<string, Task[]>();
     const others: Task[] = [];
 
     // Group first (unsorted) to get stable room set
-    for (const task of tasks) {
+    for (const task of visibleTasks) {
       if (!task.room) {
         others.push(task);
       } else {
@@ -140,7 +146,7 @@ export default function TasksScreen() {
     }
 
     return result;
-  }, [tasks, sortMode, collapsedRooms]);
+  }, [visibleTasks, sortMode, collapsedRooms]);
 
   const currentSortLabel = SORT_MODES.find((s) => s.mode === sortMode)?.label ?? "";
 
@@ -170,6 +176,15 @@ export default function TasksScreen() {
 
       {tasks.length > 0 && (
         <View style={styles.sortRow}>
+          <TouchableOpacity
+            style={[styles.filterBtn, myTasksOnly && styles.filterBtnActive]}
+            onPress={() => setMyTasksOnly((v) => !v)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.filterBtnText, myTasksOnly && styles.filterBtnTextActive]}>
+              👤 My Tasks
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.sortBtn} onPress={cycleSortMode} activeOpacity={0.8}>
             <Text style={styles.sortBtnIcon}>↕</Text>
             <Text style={styles.sortBtnLabel}>{currentSortLabel}</Text>
@@ -227,7 +242,7 @@ export default function TasksScreen() {
             </View>
           }
           contentContainerStyle={
-            tasks.length === 0 ? styles.emptyContainer : styles.list
+            visibleTasks.length === 0 ? styles.emptyContainer : styles.list
           }
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={true}
@@ -308,8 +323,32 @@ const styles = StyleSheet.create({
   },
   sortRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.xs,
+  },
+  filterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    ...shadow,
+  },
+  filterBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  filterBtnTextActive: {
+    color: "#fff",
   },
   sortBtn: {
     flexDirection: "row",

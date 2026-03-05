@@ -31,6 +31,8 @@ export interface Task {
   status: "open" | "completed";
   frequency: "once" | "daily" | "weekly";
   room: string | null;
+  assignedTo: string | null;
+  assigneeName: string | null;
   createdBy: string;
   completedBy: string | null;
   completedAt: string | null;

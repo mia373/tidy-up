@@ -28,6 +28,7 @@ export function mapHome(row: Record<string, unknown>): Home {
 }
 
 export function mapTask(row: Record<string, unknown>): Task {
+  const assignee = row.assignee as { name: string } | null;
   return {
     id: row.id as string,
     homeId: row.home_id as string,
@@ -36,6 +37,8 @@ export function mapTask(row: Record<string, unknown>): Task {
     status: row.status as "open" | "completed",
     frequency: (row.frequency as "once" | "daily" | "weekly" | undefined) ?? "once",
     room: (row.room as string | null) ?? null,
+    assignedTo: (row.assigned_to as string | null) ?? null,
+    assigneeName: assignee?.name ?? null,
     createdBy: row.created_by as string,
     completedBy: (row.completed_by as string | null) ?? null,
     completedAt: (row.completed_at as string | null) ?? null,

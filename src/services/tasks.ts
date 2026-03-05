@@ -8,7 +8,8 @@ export const addTask = async (
   points: number,
   createdBy: string,
   frequency: "once" | "daily" | "weekly" = "once",
-  room: string | null = null
+  room: string | null = null,
+  assignedTo: string | null = null
 ): Promise<string> => {
   try {
     const { data, error } = await supabase
@@ -20,6 +21,7 @@ export const addTask = async (
         status: "open",
         frequency,
         room: room || null,
+        assigned_to: assignedTo || null,
         created_by: createdBy,
         completed_by: null,
         completed_at: null,
@@ -35,7 +37,7 @@ export const addTask = async (
 
 // Pure function — transforms AI suggestions into a Supabase insert payload (unit-testable).
 export const buildBatchPayload = (
-  tasks: Array<{ title: string; points: number; room?: string | null }>,
+  tasks: Array<{ title: string; points: number; room?: string | null; assignedTo?: string | null }>,
   homeId: string,
   createdBy: string
 ) =>
@@ -46,6 +48,7 @@ export const buildBatchPayload = (
     status: "open" as const,
     frequency: "once" as const,
     room: t.room || null,
+    assigned_to: t.assignedTo || null,
     created_by: createdBy,
     completed_by: null,
     completed_at: null,
@@ -53,7 +56,7 @@ export const buildBatchPayload = (
 
 // Batch-inserts all tasks in a single query (atomic — all succeed or all fail).
 export const addTasksBatch = async (
-  tasks: Array<{ title: string; points: number; room?: string | null }>,
+  tasks: Array<{ title: string; points: number; room?: string | null; assignedTo?: string | null }>,
   homeId: string,
   createdBy: string
 ): Promise<number> => {
@@ -111,11 +114,11 @@ export const subscribeToTasks = (
   const fetchTasks = async () => {
     const { data } = await supabase
       .from("tasks")
-      .select("*")
+      .select("*, assignee:users!assigned_to(name)")
       .eq("home_id", homeId)
       .eq("status", "open")
       .order("created_at", { ascending: false });
-    callback((data ?? []).map(mapTask));
+    callback((data ?? []).map((row) => mapTask(row as Record<string, unknown>)));
   };
 
   void fetchTasks();

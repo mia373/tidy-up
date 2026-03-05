@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Alert,
   View,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
@@ -14,8 +15,17 @@ import { colors, spacing, shadow } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addTask } from "../services/tasks";
 import { useAuthStore } from "../store/useAuthStore";
+import { useHomeMembers } from "../hooks/useHomeMembers";
 import { MainTabParamList } from "../types/models";
 import { useGenerateTasks } from "../hooks/useGenerateTasks";
+
+const AVATAR_COLORS = ["#548BF8", "#FF6B6B", "#68D368", "#F97316", "#A855F7", "#EC4899"];
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 type Frequency = "once" | "daily" | "weekly";
 
@@ -31,11 +41,13 @@ type Props = {
 
 export default function AddTaskScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
+  const members = useHomeMembers(user?.homeId ?? null);
   const { triggerGeneration, generating } = useGenerateTasks();
   const [title, setTitle] = useState("");
   const [pointsText, setPointsText] = useState("");
   const [room, setRoom] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
+  const [assignedTo, setAssignedTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -51,11 +63,12 @@ export default function AddTaskScreen({ navigation }: Props) {
     if (!user?.homeId) return;
     try {
       setLoading(true);
-      await addTask(user.homeId, title.trim(), points, user.id, frequency, room.trim() || null);
+      await addTask(user.homeId, title.trim(), points, user.id, frequency, room.trim() || null, assignedTo);
       setTitle("");
       setPointsText("");
       setRoom("");
       setFrequency("once");
+      setAssignedTo(null);
       navigation.navigate("Tasks");
     } catch (error) {
       Alert.alert(
@@ -69,6 +82,7 @@ export default function AddTaskScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <Text style={styles.title}>Add Task ✏️</Text>
         <TouchableOpacity
@@ -131,7 +145,58 @@ export default function AddTaskScreen({ navigation }: Props) {
           </TouchableOpacity>
         ))}
       </View>
+      {members.length > 0 && (
+        <>
+          <Text style={styles.freqLabel}>Assign to</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.memberScroll}
+          >
+            <View style={styles.memberRow}>
+              {/* "No one" option */}
+              <TouchableOpacity
+                style={styles.memberChip}
+                onPress={() => setAssignedTo(null)}
+                activeOpacity={0.8}
+              >
+                <View
+                  style={[
+                    styles.memberAvatar,
+                    styles.memberAvatarUnassigned,
+                    !assignedTo && styles.memberAvatarSelected,
+                  ]}
+                >
+                  <Text style={styles.memberInitialsUnassigned}>—</Text>
+                </View>
+                <Text style={styles.memberChipName}>No one</Text>
+              </TouchableOpacity>
+              {members.map((m, i) => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={styles.memberChip}
+                  onPress={() => setAssignedTo(m.id)}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.memberAvatar,
+                      { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] },
+                      assignedTo === m.id && styles.memberAvatarSelected,
+                    ]}
+                  >
+                    <Text style={styles.memberInitials}>{getInitials(m.name)}</Text>
+                  </View>
+                  <Text style={styles.memberChipName}>{m.name.split(" ")[0]}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </>
+      )}
+
       <PrimaryButton title="Create Task" onPress={handleCreate} loading={loading} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -219,5 +284,54 @@ const styles = StyleSheet.create({
   },
   freqTextActive: {
     opacity: 1,
+  },
+  memberScroll: {
+    marginBottom: spacing.lg,
+  },
+  memberRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingBottom: 4,
+  },
+  memberChip: {
+    alignItems: "center",
+    gap: 4,
+  },
+  memberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberAvatarUnassigned: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+  },
+  memberAvatarSelected: {
+    borderColor: colors.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  memberInitials: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#fff",
+  },
+  memberInitialsUnassigned: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.muted,
+  },
+  memberChipName: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.text,
+    opacity: 0.7,
   },
 });

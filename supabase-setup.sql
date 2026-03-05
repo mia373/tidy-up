@@ -284,3 +284,9 @@ begin
   where id = p_item_id;
 end;
 $$;
+
+-- ============================================================
+-- PHASE 10.6.a MIGRATIONS — Task Assignment
+-- ============================================================
+
+alter table tasks add column if not exists assigned_to uuid references users(id) on delete set null;
