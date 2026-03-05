@@ -30,6 +30,7 @@ export interface Task {
   points: number;
   status: "open" | "completed";
   frequency: "once" | "daily" | "weekly";
+  room: string | null;
   createdBy: string;
   completedBy: string | null;
   completedAt: string | null;

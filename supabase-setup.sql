@@ -141,3 +141,9 @@ alter table homes add column if not exists member_count int
 -- Track how many times AI task generation has been triggered today per home
 alter table homes add column if not exists ai_requests_today   int  not null default 0;
 alter table homes add column if not exists ai_requests_reset_at date;
+
+-- ============================================================
+-- PHASE 10.2 MIGRATIONS — Tasks grouped by room
+-- ============================================================
+
+alter table tasks add column if not exists room text default null;

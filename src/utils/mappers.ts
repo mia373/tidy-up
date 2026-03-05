@@ -35,6 +35,7 @@ export function mapTask(row: Record<string, unknown>): Task {
     points: row.points as number,
     status: row.status as "open" | "completed",
     frequency: (row.frequency as "once" | "daily" | "weekly" | undefined) ?? "once",
+    room: (row.room as string | null) ?? null,
     createdBy: row.created_by as string,
     completedBy: (row.completed_by as string | null) ?? null,
     completedAt: (row.completed_at as string | null) ?? null,

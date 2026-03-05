@@ -34,6 +34,7 @@ export default function AddTaskScreen({ navigation }: Props) {
   const { triggerGeneration, generating } = useGenerateTasks();
   const [title, setTitle] = useState("");
   const [pointsText, setPointsText] = useState("");
+  const [room, setRoom] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
   const [loading, setLoading] = useState(false);
 
@@ -50,9 +51,10 @@ export default function AddTaskScreen({ navigation }: Props) {
     if (!user?.homeId) return;
     try {
       setLoading(true);
-      await addTask(user.homeId, title.trim(), points, user.id, frequency);
+      await addTask(user.homeId, title.trim(), points, user.id, frequency, room.trim() || null);
       setTitle("");
       setPointsText("");
+      setRoom("");
       setFrequency("once");
       navigation.navigate("Tasks");
     } catch (error) {
@@ -96,6 +98,14 @@ export default function AddTaskScreen({ navigation }: Props) {
         value={pointsText}
         onChangeText={setPointsText}
         keyboardType="number-pad"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Room (optional)"
+        placeholderTextColor={colors.muted}
+        value={room}
+        onChangeText={setRoom}
+        maxLength={40}
       />
       <Text style={styles.freqLabel}>Repeats</Text>
       <View style={styles.freqRow}>
