@@ -33,6 +33,7 @@ export interface Task {
   room: string | null;
   assignedTo: string | null;
   assigneeName: string | null;
+  dueDate: string | null;
   createdBy: string;
   completedBy: string | null;
   completedAt: string | null;

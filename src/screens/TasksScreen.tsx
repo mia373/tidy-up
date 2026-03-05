@@ -33,8 +33,18 @@ interface Section {
   totalCount: number; // count even when collapsed
 }
 
+function isOverdue(task: Task): boolean {
+  if (!task.dueDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(task.dueDate + "T00:00:00") < today;
+}
+
 function sortTasks(tasks: Task[], mode: SortMode): Task[] {
-  return [...tasks].sort((a, b) => {
+  const overdue = tasks
+    .filter(isOverdue)
+    .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
+  const rest = tasks.filter((t) => !isOverdue(t)).sort((a, b) => {
     switch (mode) {
       case "newest":
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -46,6 +56,7 @@ function sortTasks(tasks: Task[], mode: SortMode): Task[] {
         return b.title.localeCompare(a.title);
     }
   });
+  return [...overdue, ...rest];
 }
 
 export default function TasksScreen() {

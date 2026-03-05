@@ -4,6 +4,21 @@ import { Task } from "../types/models";
 import { PrimaryButton } from "./PrimaryButton";
 import { colors, spacing, shadow } from "../theme";
 
+function getDueDateInfo(dueDate: string): { label: string; color: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate + "T00:00:00");
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) return { label: "Overdue", color: colors.error };
+  if (diffDays === 0) return { label: "Due today", color: "#F59E0B" };
+  if (diffDays === 1) return { label: "Due tomorrow", color: "#D97706" };
+  return {
+    label: `Due ${due.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+    color: colors.muted,
+  };
+}
+
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -17,10 +32,17 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onComplete, loading }: TaskCardProps) {
+  const dueDateInfo = task.dueDate ? getDueDateInfo(task.dueDate) : null;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, dueDateInfo?.label === "Overdue" && styles.cardOverdue]}>
       <View style={styles.info}>
         <Text style={styles.title}>{task.title}</Text>
+        {dueDateInfo && (
+          <Text style={[styles.dueLabel, { color: dueDateInfo.color }]}>
+            {dueDateInfo.label}
+          </Text>
+        )}
         <View style={styles.badgeRow}>
           <View style={styles.pointsBadge}>
             <Text style={styles.points}>+{task.points} pts</Text>
@@ -100,5 +122,13 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900",
     color: "#fff",
+  },
+  cardOverdue: {
+    borderColor: colors.error,
+  },
+  dueLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 4,
   },
 });

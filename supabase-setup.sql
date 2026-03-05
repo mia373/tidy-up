@@ -290,3 +290,9 @@ $$;
 -- ============================================================
 
 alter table tasks add column if not exists assigned_to uuid references users(id) on delete set null;
+
+-- ============================================================
+-- PHASE 10.6.b MIGRATIONS — Task Due Dates
+-- ============================================================
+
+alter table tasks add column if not exists due_date date default null;

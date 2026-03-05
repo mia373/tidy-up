@@ -8,7 +8,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { colors, spacing, shadow } from "../theme";
@@ -48,6 +50,8 @@ export default function AddTaskScreen({ navigation }: Props) {
   const [room, setRoom] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
   const [assignedTo, setAssignedTo] = useState<string | null>(null);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -63,12 +67,16 @@ export default function AddTaskScreen({ navigation }: Props) {
     if (!user?.homeId) return;
     try {
       setLoading(true);
-      await addTask(user.homeId, title.trim(), points, user.id, frequency, room.trim() || null, assignedTo);
+      const dueDateStr = dueDate
+        ? `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-${String(dueDate.getDate()).padStart(2, "0")}`
+        : null;
+      await addTask(user.homeId, title.trim(), points, user.id, frequency, room.trim() || null, assignedTo, dueDateStr);
       setTitle("");
       setPointsText("");
       setRoom("");
       setFrequency("once");
       setAssignedTo(null);
+      setDueDate(null);
       navigation.navigate("Tasks");
     } catch (error) {
       Alert.alert(
@@ -121,6 +129,43 @@ export default function AddTaskScreen({ navigation }: Props) {
         onChangeText={setRoom}
         maxLength={40}
       />
+      <Text style={styles.freqLabel}>Due date</Text>
+      <View style={styles.dateRow}>
+        <TouchableOpacity
+          style={styles.dateBtn}
+          onPress={() => setShowDatePicker((v) => !v)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.dateBtnText}>
+            {dueDate
+              ? dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "No due date"}
+          </Text>
+        </TouchableOpacity>
+        {dueDate && (
+          <TouchableOpacity onPress={() => { setDueDate(null); setShowDatePicker(false); }}>
+            <Text style={styles.dateClear}>✕ Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {showDatePicker && (
+        <DateTimePicker
+          value={dueDate ?? new Date()}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          minimumDate={new Date()}
+          onChange={(event: DateTimePickerEvent, selected?: Date) => {
+            if (Platform.OS === "android") setShowDatePicker(false);
+            if (event.type !== "dismissed" && selected) setDueDate(selected);
+          }}
+        />
+      )}
+      {showDatePicker && Platform.OS === "ios" && (
+        <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.dateDoneBtn}>
+          <Text style={styles.dateDoneBtnText}>Done</Text>
+        </TouchableOpacity>
+      )}
+
       <Text style={styles.freqLabel}>Repeats</Text>
       <View style={styles.freqRow}>
         {FREQUENCIES.map((f) => (
@@ -333,5 +378,41 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     opacity: 0.7,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  dateBtn: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.border,
+    borderRadius: 20,
+    padding: spacing.md,
+    ...shadow,
+  },
+  dateBtnText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  dateClear: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.muted,
+  },
+  dateDoneBtn: {
+    alignSelf: "flex-end",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  dateDoneBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.primary,
   },
 });

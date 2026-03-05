@@ -9,7 +9,8 @@ export const addTask = async (
   createdBy: string,
   frequency: "once" | "daily" | "weekly" = "once",
   room: string | null = null,
-  assignedTo: string | null = null
+  assignedTo: string | null = null,
+  dueDate: string | null = null
 ): Promise<string> => {
   try {
     const { data, error } = await supabase
@@ -22,6 +23,7 @@ export const addTask = async (
         frequency,
         room: room || null,
         assigned_to: assignedTo || null,
+        due_date: dueDate || null,
         created_by: createdBy,
         completed_by: null,
         completed_at: null,
