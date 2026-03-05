@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
-  FlatList,
+  SectionList,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -15,14 +15,46 @@ import { useTasks } from "../hooks/useTasks";
 import { completeTask } from "../services/tasks";
 import { signOut } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
+import { useTasksStore, SortMode } from "../store/useTasksStore";
 import { useNotifications } from "../hooks/useNotifications";
 import { useGenerateTasks } from "../hooks/useGenerateTasks";
+import { Task } from "../types/models";
+
+const SORT_MODES: { mode: SortMode; label: string }[] = [
+  { mode: "newest", label: "Newest" },
+  { mode: "oldest", label: "Oldest" },
+  { mode: "az", label: "A–Z" },
+  { mode: "za", label: "Z–A" },
+];
+
+interface Section {
+  title: string;
+  data: Task[];
+  totalCount: number; // count even when collapsed
+}
+
+function sortTasks(tasks: Task[], mode: SortMode): Task[] {
+  return [...tasks].sort((a, b) => {
+    switch (mode) {
+      case "newest":
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case "oldest":
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case "az":
+        return a.title.localeCompare(b.title);
+      case "za":
+        return b.title.localeCompare(a.title);
+    }
+  });
+}
 
 export default function TasksScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { tasks, loading } = useTasks(user?.homeId ?? null);
+  const { sortMode, setSortMode } = useTasksStore();
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
   const { notifyTaskComplete } = useNotifications();
   const { triggerGeneration, generating } = useGenerateTasks();
 
@@ -55,14 +87,69 @@ export default function TasksScreen() {
     }
   };
 
+  const cycleSortMode = useCallback(() => {
+    const idx = SORT_MODES.findIndex((s) => s.mode === sortMode);
+    setSortMode(SORT_MODES[(idx + 1) % SORT_MODES.length].mode);
+  }, [sortMode, setSortMode]);
+
+  const toggleCollapse = useCallback((room: string) => {
+    setCollapsedRooms((prev) => {
+      const next = new Set(prev);
+      if (next.has(room)) {
+        next.delete(room);
+      } else {
+        next.add(room);
+      }
+      return next;
+    });
+  }, []);
+
+  const sections: Section[] = useMemo(() => {
+    const roomMap = new Map<string, Task[]>();
+    const others: Task[] = [];
+
+    // Group first (unsorted) to get stable room set
+    for (const task of tasks) {
+      if (!task.room) {
+        others.push(task);
+      } else {
+        if (!roomMap.has(task.room)) roomMap.set(task.room, []);
+        roomMap.get(task.room)!.push(task);
+      }
+    }
+
+    // Rooms are always alphabetical; "Other" always last
+    const sortedRooms = [...roomMap.keys()].sort((a, b) => a.localeCompare(b));
+
+    const result: Section[] = sortedRooms.map((room) => {
+      const roomTasks = sortTasks(roomMap.get(room)!, sortMode);
+      return {
+        title: room,
+        totalCount: roomTasks.length,
+        data: collapsedRooms.has(room) ? [] : roomTasks,
+      };
+    });
+
+    if (others.length > 0) {
+      const sortedOthers = sortTasks(others, sortMode);
+      result.push({
+        title: "Other",
+        totalCount: sortedOthers.length,
+        data: collapsedRooms.has("Other") ? [] : sortedOthers,
+      });
+    }
+
+    return result;
+  }, [tasks, sortMode, collapsedRooms]);
+
+  const currentSortLabel = SORT_MODES.find((s) => s.mode === sortMode)?.label ?? "";
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Tasks ✏️</Text>
-          {user && (
-            <Text style={styles.subtitle}>hey, {user.name}!</Text>
-          )}
+          {user && <Text style={styles.subtitle}>hey, {user.name}!</Text>}
         </View>
         <View style={styles.headerRight}>
           <View style={styles.badgeRow}>
@@ -81,15 +168,20 @@ export default function TasksScreen() {
         </View>
       </View>
 
+      {tasks.length > 0 && (
+        <View style={styles.sortRow}>
+          <TouchableOpacity style={styles.sortBtn} onPress={cycleSortMode} activeOpacity={0.8}>
+            <Text style={styles.sortBtnIcon}>↕</Text>
+            <Text style={styles.sortBtnLabel}>{currentSortLabel}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color={colors.border}
-          style={styles.loader}
-        />
+        <ActivityIndicator size="large" color={colors.border} style={styles.loader} />
       ) : (
-        <FlatList
-          data={tasks}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TaskCard
@@ -97,6 +189,21 @@ export default function TasksScreen() {
               onComplete={handleComplete}
               loading={completingId === item.id}
             />
+          )}
+          renderSectionHeader={({ section }) => (
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => toggleCollapse(section.title)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <View style={styles.sectionMeta}>
+                <Text style={styles.sectionCount}>{section.totalCount}</Text>
+                <Text style={styles.sectionChevron}>
+                  {collapsedRooms.has(section.title) ? "▸" : "▾"}
+                </Text>
+              </View>
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -123,6 +230,7 @@ export default function TasksScreen() {
             tasks.length === 0 ? styles.emptyContainer : styles.list
           }
           showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={true}
         />
       )}
     </SafeAreaView>
@@ -133,13 +241,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: 2,
+    paddingBottom: 0,
+    overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   title: {
     fontSize: 32,
@@ -195,11 +306,69 @@ const styles = StyleSheet.create({
     opacity: 0.45,
     textDecorationLine: "underline",
   },
+  sortRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: spacing.xs,
+  },
+  sortBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    ...shadow,
+  },
+  sortBtnIcon: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  sortBtnLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+  },
   loader: {
     marginTop: spacing.xl,
   },
   list: {
-    paddingBottom: spacing.lg,
+    paddingBottom: 0,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.bg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.text,
+    opacity: 0.5,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  sectionMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  sectionCount: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.muted,
+  },
+  sectionChevron: {
+    fontSize: 14,
+    color: colors.muted,
+    fontWeight: "700",
   },
   empty: {
     alignItems: "center",

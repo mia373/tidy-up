@@ -7,7 +7,8 @@ export const addTask = async (
   title: string,
   points: number,
   createdBy: string,
-  frequency: "once" | "daily" | "weekly" = "once"
+  frequency: "once" | "daily" | "weekly" = "once",
+  room: string | null = null
 ): Promise<string> => {
   try {
     const { data, error } = await supabase
@@ -18,6 +19,7 @@ export const addTask = async (
         points,
         status: "open",
         frequency,
+        room: room || null,
         created_by: createdBy,
         completed_by: null,
         completed_at: null,
@@ -33,7 +35,7 @@ export const addTask = async (
 
 // Pure function — transforms AI suggestions into a Supabase insert payload (unit-testable).
 export const buildBatchPayload = (
-  tasks: Array<{ title: string; points: number }>,
+  tasks: Array<{ title: string; points: number; room?: string | null }>,
   homeId: string,
   createdBy: string
 ) =>
@@ -43,6 +45,7 @@ export const buildBatchPayload = (
     points: t.points,
     status: "open" as const,
     frequency: "once" as const,
+    room: t.room || null,
     created_by: createdBy,
     completed_by: null,
     completed_at: null,
@@ -50,7 +53,7 @@ export const buildBatchPayload = (
 
 // Batch-inserts all tasks in a single query (atomic — all succeed or all fail).
 export const addTasksBatch = async (
-  tasks: Array<{ title: string; points: number }>,
+  tasks: Array<{ title: string; points: number; room?: string | null }>,
   homeId: string,
   createdBy: string
 ): Promise<number> => {

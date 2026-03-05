@@ -14,7 +14,13 @@ const SYSTEM_PROMPT = `You are a household chore assistant. Return ONLY a valid 
 Each object must have exactly these fields:
 - "title": string (concise, actionable chore name, e.g. "Wipe kitchen counters")
 - "points": number (5 = quick task under 5 min, 10 = medium task ~15 min, 20 = deep clean ~30 min, 30 = heavy effort over 45 min)
-- "room": string (which room the task belongs to, matching one of the provided rooms where possible)`;
+- "room": string (which room the task belongs to — use the room name exactly as given)
+
+Rules:
+- Generate exactly 3 tasks per room — no more, no fewer.
+- Within each room, order tasks from highest to lowest points.
+- All tasks for the same room must appear consecutively in the array.
+- Do not repeat task titles across rooms.`;
 
 function buildUserPrompt(profile: {
   homeType: string | null;
@@ -26,11 +32,15 @@ function buildUserPrompt(profile: {
   if (profile.homeType) parts.push(`Home type: ${profile.homeType}`);
   const memberWord = profile.memberCount === 1 ? "person" : "people";
   parts.push(`${profile.memberCount} ${memberWord} living there`);
-  if (profile.rooms.length > 0) parts.push(`Rooms: ${profile.rooms.join(", ")}`);
   if (profile.hasPets) parts.push("Has pets");
+
+  const roomList = profile.rooms.map((r) => `- ${r}`).join("\n");
+
   return (
-    `Generate a weekly chore list of 15–25 tasks for a household with the following details:\n` +
-    `${parts.join("\n")}\n\nReturn only a JSON array.`
+    `Generate exactly 3 weekly chores for each of the following rooms.\n` +
+    `${parts.join("\n")}\n\n` +
+    `Rooms (generate exactly 3 tasks per room, no exceptions):\n${roomList}\n\n` +
+    `Return only a JSON array. Tasks for the same room must appear consecutively.`
   );
 }
 
@@ -56,9 +66,11 @@ Deno.serve(async (req) => {
       throw new Error(`Missing env vars: supabaseUrl=${!!supabaseUrl} serviceKey=${!!serviceKey} geminiKey=${!!geminiKey}`);
     }
 
-    const body = await req.json() as { homeId?: string };
+    const body = await req.json() as { homeId?: string; rooms?: string[] };
     const homeId = body.homeId;
-    console.log("homeId:", homeId);
+    // Optional rooms override — if provided, generate only for these rooms (used for per-room re-roll)
+    const roomsOverride = Array.isArray(body.rooms) && body.rooms.length > 0 ? body.rooms : null;
+    console.log("homeId:", homeId, "roomsOverride:", roomsOverride);
     if (!homeId) throw new Error("homeId is required");
 
     // Fetch home profile + rate limit state via Supabase REST API
@@ -101,10 +113,13 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ ai_requests_today: requestsToday + 1, ai_requests_reset_at: today }),
     });
 
+    // Use rooms override if provided (per-room re-roll), otherwise use home's rooms
+    const roomsToUse = roomsOverride ?? ((home.rooms as string[]) ?? []);
+
     // Call Gemini via Google AI REST API
     const userPrompt = buildUserPrompt({
       homeType: home.home_type as string | null,
-      rooms: (home.rooms as string[]) ?? [],
+      rooms: roomsToUse,
       memberCount: (home.member_count as number) ?? 1,
       hasPets: (home.has_pets as boolean) ?? false,
     });
@@ -117,7 +132,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
+          generationConfig: { maxOutputTokens: 4096, temperature: 0.7 },
         }),
       }
     );

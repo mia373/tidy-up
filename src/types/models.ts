@@ -30,6 +30,7 @@ export interface Task {
   points: number;
   status: "open" | "completed";
   frequency: "once" | "daily" | "weekly";
+  room: string | null;
   createdBy: string;
   completedBy: string | null;
   completedAt: string | null;
@@ -52,8 +53,9 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
+  HomeSetup: undefined;
   Main: undefined;
-  HomeProfile: undefined;
+  HomeProfile: { mode?: "edit" } | undefined;
   SuggestedTasks: { tasks: SuggestedTask[] };
 };
 

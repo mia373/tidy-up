@@ -3,7 +3,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { useAuthStore } from "../store/useAuthStore";
 import { LoadingScreen } from "../components/LoadingScreen";
 import AuthNavigator from "./AuthNavigator";
-import HomeSetupScreen from "../screens/HomeSetupScreen";
 import AppNavigator from "./AppNavigator";
 
 export default function RootNavigator() {
@@ -16,13 +15,7 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {!user ? (
-        <AuthNavigator />
-      ) : !user.homeId ? (
-        <HomeSetupScreen />
-      ) : (
-        <AppNavigator />
-      )}
+      {!user ? <AuthNavigator /> : <AppNavigator />}
     </NavigationContainer>
   );
 }
