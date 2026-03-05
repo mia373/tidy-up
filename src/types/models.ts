@@ -41,6 +41,21 @@ export interface CompletedTask extends Task {
   completerName: string | null;
 }
 
+export interface WishlistItem {
+  id: string;
+  homeId: string;
+  title: string;
+  description: string | null;
+  cost: number;
+  imageUrl: string | null;
+  createdBy: string;
+  redeemedBy: string | null;
+  redeemedAt: string | null;
+  redeemerName: string | null;
+  status: "available" | "redeemed";
+  createdAt: string;
+}
+
 export interface SuggestedTask {
   title: string;
   points: number;
@@ -57,12 +72,14 @@ export type AppStackParamList = {
   Main: undefined;
   HomeProfile: { mode?: "edit" } | undefined;
   SuggestedTasks: { tasks: SuggestedTask[] };
+  AddWishlistItem: undefined;
 };
 
 export type MainTabParamList = {
   Tasks: undefined;
   AddTask: undefined;
   Leaderboard: undefined;
+  Wishlist: undefined;
   History: undefined;
   Settings: undefined;
 };

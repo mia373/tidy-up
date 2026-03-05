@@ -221,3 +221,66 @@ begin
   end if;
 end;
 $$;
+
+-- ============================================================
+-- PHASE 10.5 MIGRATIONS — Wishlist & Points Redemption
+-- ============================================================
+
+create table if not exists wishlist_items (
+  id          uuid primary key default gen_random_uuid(),
+  home_id     uuid not null references homes(id) on delete cascade,
+  title       text not null,
+  description text,
+  cost        int not null check (cost > 0),
+  image_url   text,
+  created_by  uuid not null references users(id),
+  redeemed_by uuid references users(id),
+  redeemed_at timestamptz,
+  status      text not null default 'available' check (status in ('available', 'redeemed')),
+  created_at  timestamptz not null default now()
+);
+
+alter table wishlist_items enable row level security;
+create policy "wishlist_select" on wishlist_items for select to authenticated using (true);
+create policy "wishlist_insert" on wishlist_items for insert to authenticated with check (true);
+create policy "wishlist_update" on wishlist_items for update to authenticated using (true);
+create policy "wishlist_delete" on wishlist_items for delete to authenticated using (auth.uid() = created_by);
+
+alter publication supabase_realtime add table wishlist_items;
+
+-- RPC: redeem_item (atomic: check points, deduct, mark redeemed)
+create or replace function redeem_item(
+  p_item_id uuid,
+  p_user_id uuid
+)
+returns void
+language plpgsql
+security definer
+as $$
+declare
+  v_item   wishlist_items%rowtype;
+  v_points int;
+begin
+  select * into v_item
+  from wishlist_items
+  where id = p_item_id and status = 'available';
+
+  if not found then
+    raise exception 'Item not found or already redeemed';
+  end if;
+
+  select points into v_points from users where id = p_user_id;
+
+  if v_points < v_item.cost then
+    raise exception 'Not enough points. Need % more.', (v_item.cost - v_points);
+  end if;
+
+  update users set points = points - v_item.cost where id = p_user_id;
+
+  update wishlist_items
+  set status      = 'redeemed',
+      redeemed_by = p_user_id,
+      redeemed_at = now()
+  where id = p_item_id;
+end;
+$$;

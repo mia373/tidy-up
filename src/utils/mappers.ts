@@ -1,4 +1,4 @@
-import { AppUser, CompletedTask, Home, HomeType, Task } from "../types/models";
+import { AppUser, CompletedTask, Home, HomeType, Task, WishlistItem } from "../types/models";
 
 export function mapUser(row: Record<string, unknown>): AppUser {
   return {
@@ -39,6 +39,24 @@ export function mapTask(row: Record<string, unknown>): Task {
     createdBy: row.created_by as string,
     completedBy: (row.completed_by as string | null) ?? null,
     completedAt: (row.completed_at as string | null) ?? null,
+    createdAt: row.created_at as string,
+  };
+}
+
+export function mapWishlistItem(row: Record<string, unknown>): WishlistItem {
+  const redeemer = row.redeemer as { name: string } | null;
+  return {
+    id: row.id as string,
+    homeId: row.home_id as string,
+    title: row.title as string,
+    description: (row.description as string | null) ?? null,
+    cost: row.cost as number,
+    imageUrl: (row.image_url as string | null) ?? null,
+    createdBy: row.created_by as string,
+    redeemedBy: (row.redeemed_by as string | null) ?? null,
+    redeemedAt: (row.redeemed_at as string | null) ?? null,
+    redeemerName: redeemer?.name ?? null,
+    status: row.status as "available" | "redeemed",
     createdAt: row.created_at as string,
   };
 }

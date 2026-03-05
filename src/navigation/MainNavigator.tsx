@@ -6,6 +6,7 @@ import { colors } from "../theme";
 import TasksScreen from "../screens/TasksScreen";
 import AddTaskScreen from "../screens/AddTaskScreen";
 import LeaderboardScreen from "../screens/LeaderboardScreen";
+import WishlistScreen from "../screens/WishlistScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 
@@ -15,6 +16,7 @@ const TAB_ICONS: Record<string, string> = {
   Tasks: "✏️",
   AddTask: "➕",
   Leaderboard: "🏆",
+  Wishlist: "🎁",
   History: "📋",
   Settings: "⚙️",
 };
@@ -76,6 +78,7 @@ export default function MainNavigator() {
         options={{ tabBarLabel: "Add Task" }}
       />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <Tab.Screen name="Wishlist" component={WishlistScreen} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
