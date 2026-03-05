@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, shadow } from "../theme";
 import { fetchCompletedTasks } from "../services/tasks";
@@ -30,22 +31,25 @@ export default function HistoryScreen() {
   const [tasks, setTasks] = useState<CompletedTask[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user?.homeId) return;
-    void (async () => {
-      try {
-        const data = await fetchCompletedTasks(user.homeId!);
-        setTasks(data);
-      } catch (error) {
-        Alert.alert(
-          "Error",
-          error instanceof Error ? error.message : "Something went wrong"
-        );
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user?.homeId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.homeId) return;
+      setLoading(true);
+      void (async () => {
+        try {
+          const data = await fetchCompletedTasks(user.homeId!);
+          setTasks(data);
+        } catch (error) {
+          Alert.alert(
+            "Error",
+            error instanceof Error ? error.message : "Something went wrong"
+          );
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, [user?.homeId])
+  );
 
   return (
     <SafeAreaView style={styles.container}>
