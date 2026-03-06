@@ -4,6 +4,12 @@ import { Task } from "../types/models";
 import { PrimaryButton } from "./PrimaryButton";
 import { colors, spacing, shadow } from "../theme";
 
+const FREQUENCY_LABEL: Record<string, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  once: "",
+};
+
 function getDueDateInfo(dueDate: string): { label: string; color: string } {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -56,6 +62,13 @@ export function TaskCard({ task, onComplete, onPress, loading }: TaskCardProps) 
             <View style={styles.assigneeBadge}>
               <Text style={styles.assigneeInitials}>
                 {getInitials(task.assigneeName)}
+              </Text>
+            </View>
+          )}
+          {task.frequency !== "once" && (
+            <View style={styles.frequencyBadge}>
+              <Text style={styles.frequencyText}>
+                {FREQUENCY_LABEL[task.frequency]}
               </Text>
             </View>
           )}
@@ -126,6 +139,19 @@ const styles = StyleSheet.create({
   assigneeInitials: {
     fontSize: 9,
     fontWeight: "900",
+    color: "#fff",
+  },
+  frequencyBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  frequencyText: {
+    fontSize: 10,
+    fontWeight: "800",
     color: "#fff",
   },
   cardOverdue: {

@@ -78,8 +78,28 @@ begin
 
   -- Re-open recurring tasks by inserting a fresh open copy
   if v_task.frequency != 'once' then
-    insert into tasks (home_id, title, points, status, frequency, created_by)
-    values (v_task.home_id, v_task.title, v_task.points, 'open', v_task.frequency, v_task.created_by);
+    insert into tasks (
+      home_id, title, points, status, frequency, created_by,
+      room, assigned_to, due_date
+    )
+    values (
+      v_task.home_id,
+      v_task.title,
+      v_task.points,
+      'open',
+      v_task.frequency,
+      v_task.created_by,
+      v_task.room,
+      v_task.assigned_to,
+      case
+        when v_task.due_date is not null then
+          case v_task.frequency
+            when 'daily'  then greatest(v_task.due_date + interval '1 day',  current_date)::date
+            when 'weekly'  then greatest(v_task.due_date + interval '7 days', current_date)::date
+          end
+        else null
+      end
+    );
   end if;
 end;
 $$;
@@ -216,8 +236,28 @@ begin
 
   -- Re-open recurring tasks by inserting a fresh open copy
   if v_task.frequency != 'once' then
-    insert into tasks (home_id, title, points, status, frequency, created_by)
-    values (v_task.home_id, v_task.title, v_task.points, 'open', v_task.frequency, v_task.created_by);
+    insert into tasks (
+      home_id, title, points, status, frequency, created_by,
+      room, assigned_to, due_date
+    )
+    values (
+      v_task.home_id,
+      v_task.title,
+      v_task.points,
+      'open',
+      v_task.frequency,
+      v_task.created_by,
+      v_task.room,
+      v_task.assigned_to,
+      case
+        when v_task.due_date is not null then
+          case v_task.frequency
+            when 'daily'  then greatest(v_task.due_date + interval '1 day',  current_date)::date
+            when 'weekly'  then greatest(v_task.due_date + interval '7 days', current_date)::date
+          end
+        else null
+      end
+    );
   end if;
 end;
 $$;
@@ -296,3 +336,40 @@ alter table tasks add column if not exists assigned_to uuid references users(id)
 -- ============================================================
 
 alter table tasks add column if not exists due_date date default null;
+
+-- ============================================================
+-- PHASE 10.8 MIGRATIONS — Recurring task auto-reset
+-- ============================================================
+
+-- Auto-advance stale due dates on open recurring tasks
+create or replace function advance_stale_due_dates()
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  -- Daily tasks: snap due_date to today
+  update tasks
+  set due_date = current_date
+  where status   = 'open'
+    and frequency = 'daily'
+    and due_date is not null
+    and due_date  < current_date;
+
+  -- Weekly tasks: advance by multiples of 7 days to preserve day-of-week
+  update tasks
+  set due_date = due_date
+    + (ceil((current_date - due_date)::numeric / 7) * 7)::int
+  where status   = 'open'
+    and frequency = 'weekly'
+    and due_date is not null
+    and due_date  < current_date;
+end;
+$$;
+
+-- Schedule: run daily at 00:05 UTC
+select cron.schedule(
+  'advance-stale-due-dates',
+  '5 0 * * *',
+  $$select advance_stale_due_dates()$$
+);
