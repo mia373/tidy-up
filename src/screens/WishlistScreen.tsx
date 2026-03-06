@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { supabase } from "../services/supabase";
 import {
   subscribeToWishlist,
@@ -30,6 +32,8 @@ function formatDate(dateStr: string): string {
 }
 
 export default function WishlistScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -184,7 +188,6 @@ export default function WishlistScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Title row */}
         <View style={styles.titleRow}>
           <Text style={styles.title}>Wishlist 🎁</Text>
           <TouchableOpacity
@@ -196,7 +199,6 @@ export default function WishlistScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Points balance card */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Your Balance</Text>
           <Text style={styles.balancePoints}>{user?.points ?? 0} pts ✨</Text>
@@ -210,7 +212,6 @@ export default function WishlistScreen() {
           />
         ) : (
           <>
-            {/* Available items */}
             <Text style={styles.sectionLabel}>Available Rewards</Text>
             {availableItems.length === 0 ? (
               <View style={styles.emptyState}>
@@ -224,7 +225,6 @@ export default function WishlistScreen() {
               availableItems.map(renderAvailableItem)
             )}
 
-            {/* Redeemed section */}
             {redeemedItems.length > 0 && (
               <>
                 <View style={styles.divider} />
@@ -250,232 +250,231 @@ export default function WishlistScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.md,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  addBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    borderWidth: 2.5,
-    borderColor: colors.border,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    ...shadow,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  balanceCard: {
-    backgroundColor: colors.accent,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: colors.border,
-    padding: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.lg,
-    ...shadow,
-  },
-  balanceLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text,
-    opacity: 0.7,
-  },
-  balancePoints: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: colors.text,
-  },
-  loader: {
-    marginTop: spacing.xl,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  // --- Available item card ---
-  itemCard: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    alignItems: "flex-start",
-    ...shadow,
-  },
-  itemLeft: {
-    marginRight: spacing.sm,
-    paddingTop: 2,
-  },
-  itemEmoji: {
-    fontSize: 28,
-  },
-  itemCenter: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  itemTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: 2,
-  },
-  itemDesc: {
-    fontSize: 13,
-    color: colors.muted,
-    marginBottom: 4,
-  },
-  shortageText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.error,
-  },
-  itemRight: {
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  costBadge: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    alignItems: "center",
-  },
-  costText: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: colors.text,
-    lineHeight: 20,
-  },
-  costPts: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: colors.text,
-    opacity: 0.6,
-  },
-  redeemBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    minWidth: 70,
-    alignItems: "center",
-  },
-  redeemBtnDisabled: {
-    backgroundColor: colors.muted,
-    borderColor: colors.muted,
-    opacity: 0.5,
-  },
-  redeemBtnText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  deleteBtn: {
-    padding: 4,
-  },
-  deleteBtnText: {
-    fontSize: 14,
-    color: colors.muted,
-    fontWeight: "700",
-  },
-  // --- Redeemed section ---
-  divider: {
-    height: 2,
-    backgroundColor: colors.border,
-    opacity: 0.15,
-    borderRadius: 1,
-    marginVertical: spacing.md,
-  },
-  redeemedToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  redeemedToggleText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  redeemedChevron: {
-    fontSize: 12,
-    color: colors.muted,
-  },
-  redeemedCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    opacity: 0.7,
-  },
-  redeemedTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text,
-    textDecorationLine: "line-through",
-    marginBottom: 2,
-  },
-  redeemedMeta: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "500",
-  },
-  // --- Empty state ---
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: spacing.xl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-    opacity: 0.6,
-  },
-  emptyHint: {
-    fontSize: 14,
-    color: colors.muted,
-    textAlign: "center",
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.lg,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.md,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    addBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: 50,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      ...shadow,
+    },
+    addBtnText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: "#fff",
+    },
+    balanceCard: {
+      backgroundColor: colors.accent,
+      borderRadius: 16,
+      borderWidth: 3,
+      borderColor: colors.border,
+      padding: spacing.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.lg,
+      ...shadow,
+    },
+    balanceLabel: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.text,
+      opacity: 0.7,
+    },
+    balancePoints: {
+      fontSize: 22,
+      fontWeight: "900",
+      color: colors.text,
+    },
+    loader: {
+      marginTop: spacing.xl,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      marginBottom: spacing.sm,
+    },
+    itemCard: {
+      flexDirection: "row",
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 3,
+      borderColor: colors.border,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      alignItems: "flex-start",
+      ...shadow,
+    },
+    itemLeft: {
+      marginRight: spacing.sm,
+      paddingTop: 2,
+    },
+    itemEmoji: {
+      fontSize: 28,
+    },
+    itemCenter: {
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    itemTitle: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: colors.text,
+      marginBottom: 2,
+    },
+    itemDesc: {
+      fontSize: 13,
+      color: colors.muted,
+      marginBottom: 4,
+    },
+    shortageText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.error,
+    },
+    itemRight: {
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    costBadge: {
+      backgroundColor: colors.accent,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 3,
+      alignItems: "center",
+    },
+    costText: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: colors.text,
+      lineHeight: 20,
+    },
+    costPts: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.text,
+      opacity: 0.6,
+    },
+    redeemBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.border,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      minWidth: 70,
+      alignItems: "center",
+    },
+    redeemBtnDisabled: {
+      backgroundColor: colors.muted,
+      borderColor: colors.muted,
+      opacity: 0.5,
+    },
+    redeemBtnText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: "#fff",
+    },
+    deleteBtn: {
+      padding: 4,
+    },
+    deleteBtnText: {
+      fontSize: 14,
+      color: colors.muted,
+      fontWeight: "700",
+    },
+    divider: {
+      height: 2,
+      backgroundColor: colors.border,
+      opacity: 0.15,
+      borderRadius: 1,
+      marginVertical: spacing.md,
+    },
+    redeemedToggle: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
+    },
+    redeemedToggleText: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    redeemedChevron: {
+      fontSize: 12,
+      color: colors.muted,
+    },
+    redeemedCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.border,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      opacity: 0.7,
+    },
+    redeemedTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.text,
+      textDecorationLine: "line-through",
+      marginBottom: 2,
+    },
+    redeemedMeta: {
+      fontSize: 12,
+      color: colors.muted,
+      fontWeight: "500",
+    },
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: spacing.xl,
+    },
+    emptyEmoji: {
+      fontSize: 48,
+      marginBottom: spacing.sm,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+      opacity: 0.6,
+    },
+    emptyHint: {
+      fontSize: 14,
+      color: colors.muted,
+      textAlign: "center",
+      marginTop: spacing.xs,
+      paddingHorizontal: spacing.lg,
+    },
+  });
+}

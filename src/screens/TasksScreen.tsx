@@ -13,7 +13,9 @@ import * as Notifications from "expo-notifications";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { TaskCard } from "../components/TaskCard";
 import { useTasks } from "../hooks/useTasks";
 import { completeTask, fetchCompletedTasks } from "../services/tasks";
@@ -47,7 +49,7 @@ const SORT_MODES: { mode: SortMode; label: string }[] = [
 interface Section {
   title: string;
   data: Task[];
-  totalCount: number; // count even when collapsed
+  totalCount: number;
 }
 
 function isOverdue(task: Task): boolean {
@@ -77,6 +79,8 @@ function sortTasks(tasks: Task[], mode: SortMode): Task[] {
 }
 
 export default function TasksScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -92,6 +96,24 @@ export default function TasksScreen() {
   const { triggerGeneration, generating } = useGenerateTasks();
   const remindersEnabled = useSettingsStore((s) => s.remindersEnabled);
   const prevTasksRef = useRef<Task[]>([]);
+
+  useEffect(() => {
+    if (tabMode !== "completed" || !user?.homeId) return;
+    setHistoryLoading(true);
+    void (async () => {
+      try {
+        const data = await fetchCompletedTasks(user.homeId!);
+        setCompletedTasks(data);
+      } catch (error) {
+        Alert.alert(
+          "Error",
+          error instanceof Error ? error.message : "Something went wrong"
+        );
+      } finally {
+        setHistoryLoading(false);
+      }
+    })();
+  }, [tabMode, user?.homeId]);
 
   // Schedule smart reminders when tasks or toggle change
   useEffect(() => {
@@ -121,24 +143,6 @@ export default function TasksScreen() {
     }
     prevTasksRef.current = tasks;
   }, [tasks, user?.id]);
-
-  useEffect(() => {
-    if (tabMode !== "completed" || !user?.homeId) return;
-    setHistoryLoading(true);
-    void (async () => {
-      try {
-        const data = await fetchCompletedTasks(user.homeId!);
-        setCompletedTasks(data);
-      } catch (error) {
-        Alert.alert(
-          "Error",
-          error instanceof Error ? error.message : "Something went wrong"
-        );
-      } finally {
-        setHistoryLoading(false);
-      }
-    })();
-  }, [tabMode, user?.homeId]);
 
   const handleSignOut = async () => {
     try {
@@ -195,7 +199,6 @@ export default function TasksScreen() {
     const roomMap = new Map<string, Task[]>();
     const others: Task[] = [];
 
-    // Group first (unsorted) to get stable room set
     for (const task of visibleTasks) {
       if (!task.room) {
         others.push(task);
@@ -205,7 +208,6 @@ export default function TasksScreen() {
       }
     }
 
-    // Rooms are always alphabetical; "Other" always last
     const sortedRooms = [...roomMap.keys()].sort((a, b) => a.localeCompare(b));
 
     const result: Section[] = sortedRooms.map((room) => {
@@ -398,283 +400,285 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: 2,
-    paddingBottom: 0,
-    overflow: "hidden",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    opacity: 0.6,
-    marginTop: 2,
-  },
-  headerRight: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  streakBadge: {
-    backgroundColor: "#FFD580",
-    borderWidth: 2.5,
-    borderColor: colors.border,
-    borderRadius: 50,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    ...shadow,
-  },
-  pointsBadge: {
-    backgroundColor: colors.accent,
-    borderWidth: 2.5,
-    borderColor: colors.border,
-    borderRadius: 50,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    ...shadow,
-  },
-  pointsBadgeText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  signOutBtn: {
-    paddingHorizontal: 2,
-  },
-  signOutText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-    opacity: 0.45,
-    textDecorationLine: "underline",
-  },
-  sortRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  filterBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingVertical: 5,
-    paddingHorizontal: spacing.sm,
-    ...shadow,
-  },
-  filterBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  filterBtnTextActive: {
-    color: "#fff",
-  },
-  sortBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingVertical: 5,
-    paddingHorizontal: spacing.sm,
-    ...shadow,
-  },
-  sortBtnIcon: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  sortBtnLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  loader: {
-    marginTop: spacing.xl,
-  },
-  list: {
-    paddingBottom: 0,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.bg,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  sectionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  sectionCount: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.muted,
-  },
-  sectionChevron: {
-    fontSize: 14,
-    color: colors.muted,
-    fontWeight: "700",
-  },
-  empty: {
-    alignItems: "center",
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    opacity: 0.55,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  suggestBtn: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.lg,
-    minWidth: 160,
-    alignItems: "center",
-  },
-  suggestBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  segmentedControl: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderWidth: 2.5,
-    borderColor: colors.border,
-    borderRadius: 12,
-    marginBottom: spacing.sm,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  segmentActive: {
-    backgroundColor: colors.primary,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  segmentTextActive: {
-    color: "#fff",
-  },
-  hCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadow,
-  },
-  hCardLeft: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  hTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  hTaskTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  hFreqBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  hFreqText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  hMeta: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.muted,
-  },
-  hPointsPill: {
-    backgroundColor: colors.success,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  hPoints: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      paddingHorizontal: spacing.lg,
+      paddingTop: 2,
+      paddingBottom: 0,
+      overflow: "hidden",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      opacity: 0.6,
+      marginTop: 2,
+    },
+    headerRight: {
+      alignItems: "flex-end",
+      gap: 8,
+    },
+    badgeRow: {
+      flexDirection: "row",
+      gap: 6,
+    },
+    streakBadge: {
+      backgroundColor: colors.accent,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      borderRadius: 50,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      ...shadow,
+    },
+    pointsBadge: {
+      backgroundColor: colors.accent,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      borderRadius: 50,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      ...shadow,
+    },
+    pointsBadgeText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.text,
+    },
+    signOutBtn: {
+      paddingHorizontal: 2,
+    },
+    signOutText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.text,
+      opacity: 0.45,
+      textDecorationLine: "underline",
+    },
+    sortRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.xs,
+    },
+    filterBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingVertical: 5,
+      paddingHorizontal: spacing.sm,
+      ...shadow,
+    },
+    filterBtnActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    filterBtnText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    filterBtnTextActive: {
+      color: "#fff",
+    },
+    sortBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingVertical: 5,
+      paddingHorizontal: spacing.sm,
+      ...shadow,
+    },
+    sortBtnIcon: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+    },
+    sortBtnLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    loader: {
+      marginTop: spacing.xl,
+    },
+    list: {
+      paddingBottom: 0,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.bg,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.sm,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    sectionMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    sectionCount: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.muted,
+    },
+    sectionChevron: {
+      fontSize: 14,
+      color: colors.muted,
+      fontWeight: "700",
+    },
+    empty: {
+      alignItems: "center",
+    },
+    emptyEmoji: {
+      fontSize: 48,
+      marginBottom: spacing.sm,
+    },
+    emptyText: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      opacity: 0.55,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    suggestBtn: {
+      marginTop: spacing.lg,
+      backgroundColor: colors.primary,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.lg,
+      minWidth: 160,
+      alignItems: "center",
+    },
+    suggestBtnText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: "#fff",
+    },
+    segmentedControl: {
+      flexDirection: "row",
+      backgroundColor: colors.surface,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      borderRadius: 12,
+      marginBottom: spacing.sm,
+    },
+    segment: {
+      flex: 1,
+      paddingVertical: 8,
+      alignItems: "center",
+      borderRadius: 10,
+    },
+    segmentActive: {
+      backgroundColor: colors.primary,
+    },
+    segmentText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.text,
+    },
+    segmentTextActive: {
+      color: "#fff",
+    },
+    hCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 3,
+      borderColor: colors.border,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadow,
+    },
+    hCardLeft: {
+      flex: 1,
+      marginRight: spacing.md,
+    },
+    hTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+    },
+    hTaskTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    hFreqBadge: {
+      backgroundColor: colors.primary,
+      borderRadius: 50,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    hFreqText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: "#fff",
+    },
+    hMeta: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.muted,
+    },
+    hPointsPill: {
+      backgroundColor: colors.success,
+      borderRadius: 50,
+      borderWidth: 2,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    hPoints: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+    },
+  });
+}

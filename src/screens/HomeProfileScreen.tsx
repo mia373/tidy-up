@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { updateHomeProfile, fetchHome } from "../services/homes";
 import { generateTasks } from "../services/ai";
@@ -39,6 +41,8 @@ const DEFAULT_ROOMS = [
 ];
 
 export default function HomeProfileScreen({ navigation, route }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const isEditMode = route.params?.mode === "edit";
 
@@ -50,7 +54,6 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
   const [generating, setGenerating] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(isEditMode);
 
-  // In edit mode, pre-fill the form with the current home profile from the DB.
   useEffect(() => {
     if (!isEditMode || !user?.homeId) return;
     fetchHome(user.homeId)
@@ -110,7 +113,6 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
     }
   };
 
-  // All chips: defaults + any custom rooms not in defaults
   const allRooms = [
     ...DEFAULT_ROOMS,
     ...selectedRooms.filter((r) => !DEFAULT_ROOMS.includes(r)),
@@ -146,7 +148,6 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
             : "We'll use this to suggest the right chores for you."}
         </Text>
 
-        {/* Home name — edit mode only */}
         {isEditMode && (
           <>
             <Text style={styles.sectionLabel}>Home name</Text>
@@ -161,7 +162,6 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {/* Home type */}
         <Text style={styles.sectionLabel}>Home type</Text>
         <View style={styles.typeGrid}>
           {HOME_TYPES.map(({ label, value, icon }) => (
@@ -179,7 +179,6 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
           ))}
         </View>
 
-        {/* Rooms */}
         <Text style={styles.sectionLabel}>Rooms</Text>
         <View style={styles.chipWrap}>
           {allRooms.map((room) => {
@@ -213,7 +212,6 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* Pets */}
         <Text style={styles.sectionLabel}>Do you have pets?</Text>
         <View style={styles.petsRow}>
           <TouchableOpacity
@@ -248,173 +246,175 @@ export default function HomeProfileScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  scroll: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.muted,
-    marginBottom: spacing.xl,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  nameInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  typeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  typeCard: {
-    width: "47%",
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    padding: spacing.md,
-    alignItems: "center",
-    ...shadow,
-  },
-  typeCardSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.text,
-  },
-  typeIcon: {
-    fontSize: 28,
-    marginBottom: spacing.xs,
-  },
-  typeLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  typeLabelSelected: {
-    color: "#fff",
-  },
-  chipWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingVertical: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.text,
-  },
-  chipTextSelected: {
-    color: "#fff",
-  },
-  customRoomRow: {
-    flexDirection: "row",
-    marginTop: spacing.sm,
-    gap: spacing.sm,
-  },
-  customRoomInput: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
-    color: colors.text,
-  },
-  addRoomBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadow,
-  },
-  addRoomBtnText: {
-    fontWeight: "700",
-    color: colors.text,
-    fontSize: 14,
-  },
-  petsRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  petsBtn: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    ...shadow,
-  },
-  petsBtnSelected: {
-    backgroundColor: colors.primary,
-  },
-  petsBtnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  petsBtnTextSelected: {
-    color: "#fff",
-  },
-  cta: {
-    marginTop: spacing.xl,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.md,
-  },
-  loadingText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  loadingSubtext: {
-    fontSize: 14,
-    color: colors.muted,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    scroll: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: colors.muted,
+      marginBottom: spacing.xl,
+    },
+    sectionLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    nameInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: spacing.lg,
+    },
+    typeGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    typeCard: {
+      width: "47%",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      padding: spacing.md,
+      alignItems: "center",
+      ...shadow,
+    },
+    typeCardSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.text,
+    },
+    typeIcon: {
+      fontSize: 28,
+      marginBottom: spacing.xs,
+    },
+    typeLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    typeLabelSelected: {
+      color: "#fff",
+    },
+    chipWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    chip: {
+      paddingVertical: 6,
+      paddingHorizontal: spacing.md,
+      borderRadius: 20,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    chipSelected: {
+      backgroundColor: colors.primary,
+    },
+    chipText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.text,
+    },
+    chipTextSelected: {
+      color: "#fff",
+    },
+    customRoomRow: {
+      flexDirection: "row",
+      marginTop: spacing.sm,
+      gap: spacing.sm,
+    },
+    customRoomInput: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontSize: 15,
+      color: colors.text,
+    },
+    addRoomBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: spacing.md,
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow,
+    },
+    addRoomBtnText: {
+      fontWeight: "700",
+      color: colors.text,
+      fontSize: 14,
+    },
+    petsRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    petsBtn: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      ...shadow,
+    },
+    petsBtnSelected: {
+      backgroundColor: colors.primary,
+    },
+    petsBtnText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    petsBtnTextSelected: {
+      color: "#fff",
+    },
+    cta: {
+      marginTop: spacing.xl,
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+    },
+    loadingText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    loadingSubtext: {
+      fontSize: 14,
+      color: colors.muted,
+    },
+  });
+}

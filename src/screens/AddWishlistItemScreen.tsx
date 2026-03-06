@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addWishlistItem } from "../services/wishlist";
 import { useAuthStore } from "../store/useAuthStore";
@@ -22,6 +24,8 @@ import { AppStackParamList } from "../types/models";
 const MAX_DESC_LENGTH = 200;
 
 export default function AddWishlistItemScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
@@ -129,80 +133,82 @@ export default function AddWishlistItemScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  backBtn: {
-    backgroundColor: colors.surface,
-    borderRadius: 50,
-    borderWidth: 2.5,
-    borderColor: colors.border,
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadow,
-  },
-  backBtnText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 20,
-    padding: spacing.md,
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.sm,
-    ...shadow,
-  },
-  inputMultiline: {
-    height: 90,
-    textAlignVertical: "top",
-    borderRadius: 16,
-  },
-  charCount: {
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: "right",
-    marginBottom: spacing.md,
-    marginTop: -4,
-  },
-  hint: {
-    fontSize: 12,
-    color: colors.muted,
-    marginBottom: spacing.lg,
-    marginTop: -4,
-  },
-  submitRow: {
-    marginTop: spacing.sm,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.xl,
+      gap: spacing.md,
+    },
+    backBtn: {
+      backgroundColor: colors.surface,
+      borderRadius: 50,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      width: 36,
+      height: 36,
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow,
+    },
+    backBtnText: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: colors.text,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      marginBottom: spacing.sm,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 20,
+      padding: spacing.md,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: spacing.sm,
+      ...shadow,
+    },
+    inputMultiline: {
+      height: 90,
+      textAlignVertical: "top",
+      borderRadius: 16,
+    },
+    charCount: {
+      fontSize: 12,
+      color: colors.muted,
+      textAlign: "right",
+      marginBottom: spacing.md,
+      marginTop: -4,
+    },
+    hint: {
+      fontSize: 12,
+      color: colors.muted,
+      marginBottom: spacing.lg,
+      marginTop: -4,
+    },
+    submitRow: {
+      marginTop: spacing.sm,
+    },
+  });
+}

@@ -12,7 +12,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addTasksBatch } from "../services/tasks";
 import { generateTasksForRoom } from "../services/ai";
@@ -31,7 +33,7 @@ function getInitials(name: string): string {
 type Props = NativeStackScreenProps<AppStackParamList, "SuggestedTasks">;
 
 interface EditableTask {
-  key: string; // stable unique ID for mutation — not index-based
+  key: string;
   title: string;
   points: string;
   room: string;
@@ -45,6 +47,8 @@ interface Section {
 }
 
 export default function SuggestedTasksScreen({ navigation, route }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const members = useHomeMembers(user?.homeId ?? null);
 
@@ -59,7 +63,6 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
     }))
   );
 
-  // Track original room order so sections don't jump around after re-roll
   const [roomOrder] = useState<string[]>(() => [
     ...new Set(route.params.tasks.map((t) => t.room)),
   ]);
@@ -107,12 +110,11 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
     setRegeneratingRoom(room);
     try {
       const newRawTasks = await generateTasksForRoom(user.homeId, room);
-      // Normalize room field and deduplicate against tasks from other rooms in the review list
       const otherTitles = new Set(
         tasks.filter((t) => t.room !== room).map((t) => t.title.toLowerCase())
       );
       const filtered = newRawTasks
-        .map((t) => ({ ...t, room })) // normalize room casing to match original
+        .map((t) => ({ ...t, room }))
         .filter((t) => !otherTitles.has(t.title.toLowerCase()));
       const newEditable: EditableTask[] = filtered.map((t, i) => ({
         key: `${room}-regen-${Date.now()}-${i}`,
@@ -157,7 +159,6 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
         assignedTo: t.assignedTo,
       }));
       const count = await addTasksBatch(payload, user.homeId, user.id);
-      // 9.9.4 — track generated vs. kept for prompt tuning
       console.log(`[AI analytics] generated=${tasks.length} kept=${count} ratio=${tasks.length > 0 ? (count / tasks.length).toFixed(2) : "n/a"}`);
       navigation.reset({ index: 0, routes: [{ name: "Main" }] });
       Alert.alert("Done!", `Added ${count} task${count !== 1 ? "s" : ""} to your home. 🎉`);
@@ -297,179 +298,181 @@ export default function SuggestedTasksScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.muted,
-    marginTop: 2,
-  },
-  selectAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.primary,
-    textDecorationLine: "underline",
-  },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  regenBtn: {
-    minWidth: 60,
-    alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  regenBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-  regenBtnTextDisabled: {
-    color: colors.muted,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    padding: spacing.sm,
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-    ...shadow,
-  },
-  cardDimmed: {
-    opacity: 0.45,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  cardBody: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  titleInput: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    padding: 0,
-  },
-  pointsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  pointsInput: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.text,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.border,
-    minWidth: 28,
-    textAlign: "center",
-    padding: 0,
-  },
-  pointsLabel: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: "600",
-  },
-  deleteBtn: {
-    padding: spacing.xs,
-  },
-  deleteBtnText: {
-    fontSize: 14,
-    color: colors.muted,
-    fontWeight: "700",
-  },
-  footer: {
-    padding: spacing.lg,
-    paddingBottom: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.bg,
-  },
-  assignRow: {
-    flexDirection: "row",
-    gap: 5,
-    marginTop: 4,
-  },
-  assignChip: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  assignChipActive: {
-    borderWidth: 3,
-    borderColor: colors.border,
-  },
-  assignChipText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: colors.muted,
-  },
-  assignChipTextActive: {
-    color: colors.text,
-  },
-  assignChipTextColored: {
-    color: "#fff",
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 13,
+      color: colors.muted,
+      marginTop: 2,
+    },
+    selectAllText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.primary,
+      textDecorationLine: "underline",
+    },
+    list: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xl,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    regenBtn: {
+      minWidth: 60,
+      alignItems: "center",
+      paddingVertical: 4,
+      paddingHorizontal: spacing.sm,
+      borderRadius: 8,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    regenBtnText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    regenBtnTextDisabled: {
+      color: colors.muted,
+    },
+    card: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      padding: spacing.sm,
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+      ...shadow,
+    },
+    cardDimmed: {
+      opacity: 0.45,
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    cardBody: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    titleInput: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      padding: 0,
+    },
+    pointsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+    },
+    pointsInput: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.text,
+      borderBottomWidth: 1.5,
+      borderBottomColor: colors.border,
+      minWidth: 28,
+      textAlign: "center",
+      padding: 0,
+    },
+    pointsLabel: {
+      fontSize: 12,
+      color: colors.muted,
+      fontWeight: "600",
+    },
+    deleteBtn: {
+      padding: spacing.xs,
+    },
+    deleteBtnText: {
+      fontSize: 14,
+      color: colors.muted,
+      fontWeight: "700",
+    },
+    footer: {
+      padding: spacing.lg,
+      paddingBottom: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.bg,
+    },
+    assignRow: {
+      flexDirection: "row",
+      gap: 5,
+      marginTop: 4,
+    },
+    assignChip: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      borderWidth: 2,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    assignChipActive: {
+      borderWidth: 3,
+      borderColor: colors.border,
+    },
+    assignChipText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.muted,
+    },
+    assignChipTextActive: {
+      color: colors.text,
+    },
+    assignChipTextColored: {
+      color: "#fff",
+    },
+  });
+}

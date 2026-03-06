@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Text,
   TextInput,
@@ -13,7 +13,9 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { addTask } from "../services/tasks";
 import { useAuthStore } from "../store/useAuthStore";
@@ -42,6 +44,8 @@ type Props = {
 };
 
 export default function AddTaskScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const members = useHomeMembers(user?.homeId ?? null);
   const { triggerGeneration, generating } = useGenerateTasks();
@@ -199,7 +203,6 @@ export default function AddTaskScreen({ navigation }: Props) {
             style={styles.memberScroll}
           >
             <View style={styles.memberRow}>
-              {/* "No one" option */}
               <TouchableOpacity
                 style={styles.memberChip}
                 onPress={() => setAssignedTo(null)}
@@ -246,173 +249,175 @@ export default function AddTaskScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  sparkleBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: 12,
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadow,
-  },
-  sparkleBtnText: {
-    fontSize: 20,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 20,
-    padding: spacing.md,
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.md,
-    ...shadow,
-  },
-  freqLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  freqRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  freqBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 16,
-    ...shadow,
-  },
-  freqBtnActive: {
-    backgroundColor: colors.accent,
-  },
-  freqEmoji: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  freqText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.text,
-    opacity: 0.6,
-  },
-  freqTextActive: {
-    opacity: 1,
-  },
-  memberScroll: {
-    marginBottom: spacing.lg,
-  },
-  memberRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-    paddingBottom: 4,
-  },
-  memberChip: {
-    alignItems: "center",
-    gap: 4,
-  },
-  memberAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 3,
-    borderColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  memberAvatarUnassigned: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  memberAvatarSelected: {
-    borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
-  },
-  memberInitials: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#fff",
-  },
-  memberInitialsUnassigned: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.muted,
-  },
-  memberChipName: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.text,
-    opacity: 0.7,
-  },
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  dateBtn: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 20,
-    padding: spacing.md,
-    ...shadow,
-  },
-  dateBtnText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  dateClear: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.muted,
-  },
-  dateDoneBtn: {
-    alignSelf: "flex-end",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  dateDoneBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: spacing.xl,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    sparkleBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow,
+    },
+    sparkleBtnText: {
+      fontSize: 20,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 20,
+      padding: spacing.md,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: spacing.md,
+      ...shadow,
+    },
+    freqLabel: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      marginBottom: spacing.sm,
+    },
+    freqRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    freqBtn: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 16,
+      ...shadow,
+    },
+    freqBtnActive: {
+      backgroundColor: colors.accent,
+    },
+    freqEmoji: {
+      fontSize: 20,
+      marginBottom: 4,
+    },
+    freqText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.text,
+      opacity: 0.6,
+    },
+    freqTextActive: {
+      opacity: 1,
+    },
+    memberScroll: {
+      marginBottom: spacing.lg,
+    },
+    memberRow: {
+      flexDirection: "row",
+      gap: spacing.md,
+      paddingBottom: 4,
+    },
+    memberChip: {
+      alignItems: "center",
+      gap: 4,
+    },
+    memberAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      borderWidth: 3,
+      borderColor: "transparent",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    memberAvatarUnassigned: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+    },
+    memberAvatarSelected: {
+      borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOffset: { width: 3, height: 3 },
+      shadowOpacity: 1,
+      shadowRadius: 0,
+      elevation: 4,
+    },
+    memberInitials: {
+      fontSize: 15,
+      fontWeight: "900",
+      color: "#fff",
+    },
+    memberInitialsUnassigned: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.muted,
+    },
+    memberChipName: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.text,
+      opacity: 0.7,
+    },
+    dateRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    dateBtn: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 20,
+      padding: spacing.md,
+      ...shadow,
+    },
+    dateBtnText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    dateClear: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.muted,
+    },
+    dateDoneBtn: {
+      alignSelf: "flex-end",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      marginBottom: spacing.sm,
+    },
+    dateDoneBtnText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+  });
+}

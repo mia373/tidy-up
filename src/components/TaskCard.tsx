@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Task } from "../types/models";
 import { PrimaryButton } from "./PrimaryButton";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 
 const FREQUENCY_LABEL: Record<string, string> = {
   daily: "Daily",
@@ -10,7 +12,10 @@ const FREQUENCY_LABEL: Record<string, string> = {
   once: "",
 };
 
-function getDueDateInfo(dueDate: string): { label: string; color: string } {
+function getDueDateInfo(
+  dueDate: string,
+  colors: ColorPalette
+): { label: string; color: string } {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate + "T00:00:00");
@@ -39,7 +44,9 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onComplete, onPress, loading }: TaskCardProps) {
-  const dueDateInfo = task.dueDate ? getDueDateInfo(task.dueDate) : null;
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const dueDateInfo = task.dueDate ? getDueDateInfo(task.dueDate, colors) : null;
 
   return (
     <TouchableOpacity
@@ -84,82 +91,84 @@ export function TaskCard({ task, onComplete, onPress, loading }: TaskCardProps) 
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    ...shadow,
-  },
-  info: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  pointsBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.accent,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  points: {
-    fontSize: 12,
-    color: colors.text,
-    fontWeight: "800",
-  },
-  assigneeBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  assigneeInitials: {
-    fontSize: 9,
-    fontWeight: "900",
-    color: "#fff",
-  },
-  frequencyBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  frequencyText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  cardOverdue: {
-    borderColor: colors.error,
-  },
-  dueLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    card: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface,
+      padding: spacing.md,
+      borderRadius: 24,
+      borderWidth: 3,
+      borderColor: colors.border,
+      marginBottom: spacing.md,
+      ...shadow,
+    },
+    info: {
+      flex: 1,
+      marginRight: spacing.md,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    badgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    pointsBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: colors.accent,
+      borderRadius: 50,
+      borderWidth: 2,
+      borderColor: colors.border,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+    },
+    points: {
+      fontSize: 12,
+      color: colors.text,
+      fontWeight: "800",
+    },
+    assigneeBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    assigneeInitials: {
+      fontSize: 9,
+      fontWeight: "900",
+      color: "#fff",
+    },
+    frequencyBadge: {
+      backgroundColor: colors.primary,
+      borderRadius: 50,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    frequencyText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: "#fff",
+    },
+    cardOverdue: {
+      borderColor: colors.error,
+    },
+    dueLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+  });
+}

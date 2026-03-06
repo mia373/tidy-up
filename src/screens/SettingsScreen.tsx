@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,34 +10,45 @@ import {
   ScrollView,
   Switch,
 } from "react-native";
-import * as Notifications from "expo-notifications";
 import * as Clipboard from "expo-clipboard";
+import * as Notifications from "expo-notifications";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { updateName, leaveHome } from "../services/settings";
 import { fetchHome } from "../services/homes";
 import { useAuthStore } from "../store/useAuthStore";
 import { useHomeStore } from "../store/useHomeStore";
-import { useSettingsStore } from "../store/useSettingsStore";
+import { useSettingsStore, ThemeMode } from "../store/useSettingsStore";
 import { AppStackParamList } from "../types/models";
 
+const THEME_OPTIONS: { label: string; value: ThemeMode }[] = [
+  { label: "System", value: "system" },
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" },
+];
+
 export default function SettingsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const home = useHomeStore((s) => s.home);
   const setHome = useHomeStore((s) => s.setHome);
   const remindersEnabled = useSettingsStore((s) => s.remindersEnabled);
   const setRemindersEnabled = useSettingsStore((s) => s.setRemindersEnabled);
+  const themeMode = useSettingsStore((s) => s.themeMode);
+  const setThemeMode = useSettingsStore((s) => s.setThemeMode);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [name, setName] = useState(user?.name ?? "");
   const [savingName, setSavingName] = useState(false);
   const [leavingHome, setLeavingHome] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Fetch home if not already in store (e.g. after create/join home)
   useEffect(() => {
     if (!home && user?.homeId) {
       fetchHome(user.homeId).then(setHome).catch(() => {});
@@ -117,6 +128,7 @@ export default function SettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Settings ⚙️</Text>
 
+        {/* Display Name */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Display Name</Text>
           <TextInput
@@ -135,6 +147,7 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
+        {/* Invite Code */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Invite Code</Text>
           <Text style={styles.sectionHint}>
@@ -165,6 +178,7 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
+        {/* Home Profile */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Home Profile</Text>
           <Text style={styles.sectionHint}>
@@ -181,6 +195,7 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
+        {/* Notifications */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Notifications</Text>
           <Text style={styles.sectionHint}>
@@ -204,6 +219,31 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
+        {/* Appearance */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Appearance</Text>
+          <Text style={styles.sectionHint}>
+            Choose your preferred colour scheme.
+          </Text>
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.themeBtn, themeMode === opt.value && styles.themeBtnActive]}
+                onPress={() => setThemeMode(opt.value)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.themeBtnText, themeMode === opt.value && styles.themeBtnTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Leave Home */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Home</Text>
           <Text style={styles.sectionHint}>
@@ -225,143 +265,171 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: -0.5,
-    marginBottom: spacing.xl,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.text,
-    opacity: 0.5,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: spacing.sm,
-  },
-  sectionHint: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: colors.muted,
-    marginBottom: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 20,
-    padding: spacing.md,
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.md,
-    ...shadow,
-  },
-  divider: {
-    height: 3,
-    backgroundColor: colors.border,
-    borderRadius: 2,
-    marginBottom: spacing.lg,
-    opacity: 0.15,
-  },
-  inviteCard: {
-    backgroundColor: colors.accent,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderStyle: "dashed",
-    borderRadius: 16,
-    padding: spacing.lg,
-    alignItems: "center",
-    gap: spacing.md,
-    ...shadow,
-  },
-  inviteCode: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: 2,
-    fontVariant: ["tabular-nums"],
-  },
-  inviteActions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  inviteBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 2.5,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    ...shadow,
-  },
-  inviteBtnCopied: {
-    backgroundColor: colors.success,
-  },
-  inviteBtnText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: colors.text,
-  },
-  editProfileBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 50,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    alignItems: "center",
-    ...shadow,
-  },
-  editProfileBtnText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.surface,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 16,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    ...shadow,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  leaveBtn: {
-    backgroundColor: colors.error,
-    borderWidth: 3,
-    borderColor: colors.border,
-    borderRadius: 50,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    alignItems: "center",
-    ...shadow,
-  },
-  leaveBtnDisabled: {
-    opacity: 0.5,
-  },
-  leaveBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: -0.5,
+      marginBottom: spacing.xl,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.text,
+      opacity: 0.5,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      marginBottom: spacing.sm,
+    },
+    sectionHint: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: colors.muted,
+      marginBottom: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 20,
+      padding: spacing.md,
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: spacing.md,
+      ...shadow,
+    },
+    divider: {
+      height: 3,
+      backgroundColor: colors.border,
+      borderRadius: 2,
+      marginBottom: spacing.lg,
+      opacity: 0.15,
+    },
+    inviteCard: {
+      backgroundColor: colors.accent,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderStyle: "dashed",
+      borderRadius: 16,
+      padding: spacing.lg,
+      alignItems: "center",
+      gap: spacing.md,
+      ...shadow,
+    },
+    inviteCode: {
+      fontSize: 28,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: 2,
+      fontVariant: ["tabular-nums"],
+    },
+    inviteActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    inviteBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 2.5,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      ...shadow,
+    },
+    inviteBtnCopied: {
+      backgroundColor: colors.success,
+    },
+    inviteBtnText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.text,
+    },
+    editProfileBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 50,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      alignItems: "center",
+      ...shadow,
+    },
+    editProfileBtnText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "800",
+    },
+    toggleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 16,
+      paddingVertical: spacing.sm + 2,
+      paddingHorizontal: spacing.md,
+      ...shadow,
+    },
+    toggleLabel: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    themeRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    themeBtn: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: spacing.sm + 2,
+      backgroundColor: colors.surface,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 16,
+      ...shadow,
+    },
+    themeBtnActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    themeBtnText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    themeBtnTextActive: {
+      color: "#fff",
+    },
+    leaveBtn: {
+      backgroundColor: colors.error,
+      borderWidth: 3,
+      borderColor: colors.border,
+      borderRadius: 50,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      alignItems: "center",
+      ...shadow,
+    },
+    leaveBtnDisabled: {
+      opacity: 0.5,
+    },
+    leaveBtnText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "800",
+    },
+  });
+}

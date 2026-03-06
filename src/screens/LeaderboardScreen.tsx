@@ -12,7 +12,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LineChart, StackedBarChart } from "react-native-chart-kit";
-import { colors, spacing, shadow } from "../theme";
+import { spacing, shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { subscribeToLeaderboard } from "../services/leaderboard";
 import { fetchPointHistory, PointHistoryEntry } from "../services/analytics";
 import { useAuthStore } from "../store/useAuthStore";
@@ -25,8 +27,6 @@ const USER_COLORS = ["#548BF8", "#FF6B6B", "#68D368", "#F97316", "#A855F7", "#EC
 type Tab = "leaderboard" | "stats";
 type TimeRange = 7 | 30 | null;
 type ChartType = "line" | "bar";
-
-// --- Chart helpers ---
 
 type Period = { label: string; dates: string[] };
 
@@ -46,7 +46,6 @@ function buildPeriods(timeRange: TimeRange): Period[] {
     return periods;
   }
 
-  // All time: 12 weekly buckets
   const periods: Period[] = [];
   for (let week = 11; week >= 0; week--) {
     const weekDates: string[] = [];
@@ -96,9 +95,9 @@ function computeWeeklySummary(events: PointHistoryEntry[]): string | null {
   return `This week: ${top.name} earned the most (${top.pts} pts) 🏆`;
 }
 
-// --- Component ---
-
 export default function LeaderboardScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const [members, setMembers] = useState<AppUser[]>([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
@@ -152,7 +151,6 @@ export default function LeaderboardScreen() {
       return { type: "line" as const, lineData: { labels, datasets }, users, userColors };
     }
 
-    // Bar chart
     const data = periods.map((p) =>
       users.map((u) => p.dates.reduce((sum, d) => sum + (lookup[u.id]?.[d] ?? 0), 0))
     );
@@ -170,7 +168,7 @@ export default function LeaderboardScreen() {
     [historyData]
   );
 
-  const chartConfig = {
+  const chartConfig = useMemo(() => ({
     backgroundColor: colors.surface,
     backgroundGradientFrom: colors.surface,
     backgroundGradientTo: colors.surface,
@@ -179,7 +177,7 @@ export default function LeaderboardScreen() {
     labelColor: () => colors.text,
     style: { borderRadius: 12 },
     propsForDots: { r: "4", strokeWidth: "2", stroke: colors.border },
-  };
+  }), [colors]);
 
   const numPeriods = buildPeriods(timeRange).length;
   const showDots = numPeriods <= 14;
@@ -222,7 +220,6 @@ export default function LeaderboardScreen() {
           />
         )}
 
-        {/* Custom legend */}
         {chartData && (
           <View style={styles.legend}>
             {chartData.users.map((u, i) => (
@@ -234,7 +231,6 @@ export default function LeaderboardScreen() {
           </View>
         )}
 
-        {/* Weekly summary callout */}
         {weeklySummary && (
           <View style={styles.summaryCard}>
             <Text style={styles.summaryText}>{weeklySummary}</Text>
@@ -248,7 +244,6 @@ export default function LeaderboardScreen() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Leaderboard ✨</Text>
 
-      {/* Tab toggle */}
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[styles.tabBtn, tab === "leaderboard" && styles.tabBtnActive]}
@@ -307,7 +302,6 @@ export default function LeaderboardScreen() {
         )
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.statsContent}>
-          {/* Time range selector */}
           <View style={styles.controlRow}>
             {([7, 30, null] as TimeRange[]).map((range) => (
               <TouchableOpacity
@@ -327,7 +321,6 @@ export default function LeaderboardScreen() {
             ))}
           </View>
 
-          {/* Chart type selector */}
           <View style={styles.controlRow}>
             {(["line", "bar"] as ChartType[]).map((type) => (
               <TouchableOpacity
@@ -354,186 +347,184 @@ export default function LeaderboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: colors.text,
-    letterSpacing: -0.5,
-    marginBottom: spacing.md,
-  },
-  loader: {
-    marginTop: spacing.xl,
-  },
-  // --- Tab toggle ---
-  tabRow: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    padding: 3,
-    ...shadow,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: "center",
-    borderRadius: 9,
-  },
-  tabBtnActive: {
-    backgroundColor: colors.primary,
-  },
-  tabBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.muted,
-  },
-  tabBtnTextActive: {
-    color: "#fff",
-  },
-  // --- Leaderboard list ---
-  list: {
-    paddingBottom: spacing.lg,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadow,
-  },
-  rowHighlight: {
-    backgroundColor: "#E8F0FF",
-  },
-  rowFirst: {
-    backgroundColor: colors.accent,
-  },
-  medal: {
-    fontSize: 24,
-    width: 38,
-  },
-  name: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  pointsPill: {
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  points: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  // --- Stats tab ---
-  statsContent: {
-    paddingBottom: spacing.lg,
-  },
-  controlRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  controlBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  controlBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  controlBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  controlBtnTextActive: {
-    color: "#fff",
-  },
-  chart: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  legend: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  legendLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  summaryCard: {
-    backgroundColor: colors.accent,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.border,
-    padding: spacing.md,
-    ...shadow,
-  },
-  summaryText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text,
-    textAlign: "center",
-  },
-  // --- Shared empty state ---
-  empty: {
-    alignItems: "center",
-    marginTop: spacing.xl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    opacity: 0.6,
-    textAlign: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: "900",
+      color: colors.text,
+      letterSpacing: -0.5,
+      marginBottom: spacing.md,
+    },
+    loader: {
+      marginTop: spacing.xl,
+    },
+    tabRow: {
+      flexDirection: "row",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      marginBottom: spacing.md,
+      padding: 3,
+      ...shadow,
+    },
+    tabBtn: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      alignItems: "center",
+      borderRadius: 9,
+    },
+    tabBtnActive: {
+      backgroundColor: colors.primary,
+    },
+    tabBtnText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.muted,
+    },
+    tabBtnTextActive: {
+      color: "#fff",
+    },
+    list: {
+      paddingBottom: spacing.lg,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 3,
+      borderColor: colors.border,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadow,
+    },
+    rowHighlight: {
+      backgroundColor: colors.highlight,
+    },
+    rowFirst: {
+      backgroundColor: colors.accent,
+    },
+    medal: {
+      fontSize: 24,
+      width: 38,
+    },
+    name: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    pointsPill: {
+      backgroundColor: colors.primary,
+      borderRadius: 50,
+      borderWidth: 2,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    points: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#fff",
+    },
+    statsContent: {
+      paddingBottom: spacing.lg,
+    },
+    controlRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    controlBtn: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    controlBtnActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    controlBtnText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    controlBtnTextActive: {
+      color: "#fff",
+    },
+    chart: {
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      marginTop: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    legend: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    legendDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    legendLabel: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    summaryCard: {
+      backgroundColor: colors.accent,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.border,
+      padding: spacing.md,
+      ...shadow,
+    },
+    summaryText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.text,
+      textAlign: "center",
+    },
+    empty: {
+      alignItems: "center",
+      marginTop: spacing.xl,
+    },
+    emptyEmoji: {
+      fontSize: 48,
+      marginBottom: spacing.sm,
+    },
+    emptyText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+      opacity: 0.6,
+      textAlign: "center",
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+    },
+  });
+}

@@ -2,7 +2,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MainTabParamList } from "../types/models";
-import { colors } from "../theme";
+import { useTheme } from "../hooks/useTheme";
 import TasksScreen from "../screens/TasksScreen";
 import AddTaskScreen from "../screens/AddTaskScreen";
 import LeaderboardScreen from "../screens/LeaderboardScreen";
@@ -19,15 +19,14 @@ const TAB_ICONS: Record<string, string> = {
   Settings: "⚙️",
 };
 
-// Outer View fills the corner gaps with the screen background color.
-// Inner View is the cream pill with rounded top corners.
 function TabBarBackground() {
+  const { colors } = useTheme();
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View
         style={{
           flex: 1,
-          backgroundColor: "#FFF8E7",
+          backgroundColor: colors.surface,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           shadowColor: "#000",

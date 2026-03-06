@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   TouchableOpacity,
   Text,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { colors, shadow } from "../theme";
+import { shadow } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 
 interface PrimaryButtonProps {
   title: string;
@@ -22,6 +24,8 @@ export function PrimaryButton({
   disabled,
   small,
 }: PrimaryButtonProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity
       style={[
@@ -42,33 +46,35 @@ export function PrimaryButton({
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    ...shadow,
-  },
-  small: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  text: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  smallText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    button: {
+      backgroundColor: colors.primary,
+      paddingVertical: 14,
+      paddingHorizontal: 28,
+      borderRadius: 50,
+      borderWidth: 3,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      ...shadow,
+    },
+    small: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    text: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "800",
+      letterSpacing: 0.3,
+    },
+    smallText: {
+      fontSize: 13,
+      fontWeight: "700",
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Text,
   TextInput,
@@ -8,7 +8,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { colors, spacing } from "../theme";
+import { spacing } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { signUp } from "../services/auth";
 import { AuthStackParamList } from "../types/models";
@@ -18,6 +20,8 @@ type Props = {
 };
 
 export default function SignupScreen({ navigation }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -97,40 +101,42 @@ export default function SignupScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-    justifyContent: "center",
-  },
-  emoji: {
-    fontSize: 40,
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.xl,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    padding: spacing.md,
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  link: {
-    marginTop: spacing.lg,
-    alignItems: "center",
-  },
-  linkText: {
-    color: colors.primary,
-    fontSize: 14,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+      justifyContent: "center",
+    },
+    emoji: {
+      fontSize: 40,
+      textAlign: "center",
+      marginBottom: spacing.sm,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: spacing.xl,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 16,
+      padding: spacing.md,
+      fontSize: 16,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    link: {
+      marginTop: spacing.lg,
+      alignItems: "center",
+    },
+    linkText: {
+      color: colors.primary,
+      fontSize: 14,
+    },
+  });
+}

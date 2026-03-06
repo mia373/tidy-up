@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { colors, spacing } from "../theme";
+import { spacing } from "../theme";
+import { useTheme } from "../hooks/useTheme";
+import type { ColorPalette } from "../theme";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { createHome, joinHome } from "../services/homes";
 import { useAuthStore } from "../store/useAuthStore";
 import { AppStackParamList } from "../types/models";
 
 export default function HomeSetupScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -120,59 +124,61 @@ export default function HomeSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: spacing.lg,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.muted,
-    marginBottom: spacing.xl,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  input: {
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: spacing.md,
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: spacing.lg,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    marginHorizontal: spacing.md,
-    color: colors.muted,
-    fontSize: 14,
-  },
-});
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      padding: spacing.lg,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: colors.muted,
+      marginBottom: spacing.xl,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    input: {
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      padding: spacing.md,
+      fontSize: 16,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: spacing.lg,
+    },
+    divider: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    dividerText: {
+      marginHorizontal: spacing.md,
+      color: colors.muted,
+      fontSize: 14,
+    },
+  });
+}
