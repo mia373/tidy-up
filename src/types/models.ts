@@ -84,6 +84,5 @@ export type MainTabParamList = {
   AddTask: undefined;
   Leaderboard: undefined;
   Wishlist: undefined;
-  History: undefined;
   Settings: undefined;
 };

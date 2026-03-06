@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   SectionList,
+  FlatList,
   StyleSheet,
   Alert,
   ActivityIndicator,
@@ -14,13 +15,25 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { TaskCard } from "../components/TaskCard";
 import { useTasks } from "../hooks/useTasks";
-import { completeTask } from "../services/tasks";
+import { completeTask, fetchCompletedTasks } from "../services/tasks";
 import { signOut } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 import { useTasksStore, SortMode } from "../store/useTasksStore";
 import { useNotifications } from "../hooks/useNotifications";
 import { useGenerateTasks } from "../hooks/useGenerateTasks";
-import { Task, AppStackParamList } from "../types/models";
+import { Task, CompletedTask, AppStackParamList } from "../types/models";
+
+const FREQUENCY_LABEL: Record<string, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  once: "",
+};
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 const SORT_MODES: { mode: SortMode; label: string }[] = [
   { mode: "newest", label: "Newest" },
@@ -70,8 +83,29 @@ export default function TasksScreen() {
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [collapsedRooms, setCollapsedRooms] = useState<Set<string>>(new Set());
   const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const [tabMode, setTabMode] = useState<"open" | "completed">("open");
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const { notifyTaskComplete } = useNotifications();
   const { triggerGeneration, generating } = useGenerateTasks();
+
+  useEffect(() => {
+    if (tabMode !== "completed" || !user?.homeId) return;
+    setHistoryLoading(true);
+    void (async () => {
+      try {
+        const data = await fetchCompletedTasks(user.homeId!);
+        setCompletedTasks(data);
+      } catch (error) {
+        Alert.alert(
+          "Error",
+          error instanceof Error ? error.message : "Something went wrong"
+        );
+      } finally {
+        setHistoryLoading(false);
+      }
+    })();
+  }, [tabMode, user?.homeId]);
 
   const handleSignOut = async () => {
     try {
@@ -188,79 +222,143 @@ export default function TasksScreen() {
         </View>
       </View>
 
-      {tasks.length > 0 && (
-        <View style={styles.sortRow}>
-          <TouchableOpacity
-            style={[styles.filterBtn, myTasksOnly && styles.filterBtnActive]}
-            onPress={() => setMyTasksOnly((v) => !v)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterBtnText, myTasksOnly && styles.filterBtnTextActive]}>
-              👤 My Tasks
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sortBtn} onPress={cycleSortMode} activeOpacity={0.8}>
-            <Text style={styles.sortBtnIcon}>↕</Text>
-            <Text style={styles.sortBtnLabel}>{currentSortLabel}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.segmentedControl}>
+        <TouchableOpacity
+          style={[styles.segment, tabMode === "open" && styles.segmentActive]}
+          onPress={() => setTabMode("open")}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.segmentText, tabMode === "open" && styles.segmentTextActive]}>
+            Open
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segment, tabMode === "completed" && styles.segmentActive]}
+          onPress={() => setTabMode("completed")}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.segmentText, tabMode === "completed" && styles.segmentTextActive]}>
+            Completed
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color={colors.border} style={styles.loader} />
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TaskCard
-              task={item}
-              onComplete={handleComplete}
-              onPress={() => navigation.navigate("EditTask", { task: item })}
-              loading={completingId === item.id}
+      {tabMode === "open" ? (
+        <>
+          {tasks.length > 0 && (
+            <View style={styles.sortRow}>
+              <TouchableOpacity
+                style={[styles.filterBtn, myTasksOnly && styles.filterBtnActive]}
+                onPress={() => setMyTasksOnly((v) => !v)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.filterBtnText, myTasksOnly && styles.filterBtnTextActive]}>
+                  👤 My Tasks
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.sortBtn} onPress={cycleSortMode} activeOpacity={0.8}>
+                <Text style={styles.sortBtnIcon}>↕</Text>
+                <Text style={styles.sortBtnLabel}>{currentSortLabel}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.border} style={styles.loader} />
+          ) : (
+            <SectionList
+              sections={sections}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TaskCard
+                  task={item}
+                  onComplete={handleComplete}
+                  onPress={() => navigation.navigate("EditTask", { task: item })}
+                  loading={completingId === item.id}
+                />
+              )}
+              renderSectionHeader={({ section }) => (
+                <TouchableOpacity
+                  style={styles.sectionHeader}
+                  onPress={() => toggleCollapse(section.title)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                  <View style={styles.sectionMeta}>
+                    <Text style={styles.sectionCount}>{section.totalCount}</Text>
+                    <Text style={styles.sectionChevron}>
+                      {collapsedRooms.has(section.title) ? "▸" : "▾"}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={styles.empty}>
+                  <Text style={styles.emptyEmoji}>🫧</Text>
+                  <Text style={styles.emptyText}>No open tasks!</Text>
+                  <Text style={styles.emptySubtext}>
+                    Add one from the Add Task tab.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.suggestBtn}
+                    onPress={triggerGeneration}
+                    disabled={generating}
+                    activeOpacity={0.8}
+                  >
+                    {generating ? (
+                      <ActivityIndicator size="small" color={colors.surface} />
+                    ) : (
+                      <Text style={styles.suggestBtnText}>✨  Suggest tasks</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              }
+              contentContainerStyle={
+                visibleTasks.length === 0 ? styles.emptyContainer : styles.list
+              }
+              showsVerticalScrollIndicator={false}
+              stickySectionHeadersEnabled={true}
             />
           )}
-          renderSectionHeader={({ section }) => (
-            <TouchableOpacity
-              style={styles.sectionHeader}
-              onPress={() => toggleCollapse(section.title)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              <View style={styles.sectionMeta}>
-                <Text style={styles.sectionCount}>{section.totalCount}</Text>
-                <Text style={styles.sectionChevron}>
-                  {collapsedRooms.has(section.title) ? "▸" : "▾"}
+        </>
+      ) : historyLoading ? (
+        <ActivityIndicator size="large" color={colors.border} style={styles.loader} />
+      ) : (
+        <FlatList
+          data={completedTasks}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.hCard}>
+              <View style={styles.hCardLeft}>
+                <View style={styles.hTitleRow}>
+                  <Text style={styles.hTaskTitle}>{item.title}</Text>
+                  {item.frequency !== "once" && (
+                    <View style={styles.hFreqBadge}>
+                      <Text style={styles.hFreqText}>
+                        {FREQUENCY_LABEL[item.frequency]}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.hMeta}>
+                  {item.completerName ?? "Someone"} · {formatDate(item.completedAt)}
                 </Text>
               </View>
-            </TouchableOpacity>
+              <View style={styles.hPointsPill}>
+                <Text style={styles.hPoints}>+{item.points}</Text>
+              </View>
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🫧</Text>
-              <Text style={styles.emptyText}>No open tasks!</Text>
-              <Text style={styles.emptySubtext}>
-                Add one from the Add Task tab.
-              </Text>
-              <TouchableOpacity
-                style={styles.suggestBtn}
-                onPress={triggerGeneration}
-                disabled={generating}
-                activeOpacity={0.8}
-              >
-                {generating ? (
-                  <ActivityIndicator size="small" color={colors.surface} />
-                ) : (
-                  <Text style={styles.suggestBtnText}>✨  Suggest tasks</Text>
-                )}
-              </TouchableOpacity>
+              <Text style={styles.emptyText}>No completed tasks yet.</Text>
             </View>
           }
           contentContainerStyle={
-            visibleTasks.length === 0 ? styles.emptyContainer : styles.list
+            completedTasks.length === 0 ? styles.emptyContainer : styles.list
           }
           showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={true}
         />
       )}
     </SafeAreaView>
@@ -462,5 +560,88 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#fff",
+  },
+  segmentedControl: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    borderWidth: 2.5,
+    borderColor: colors.border,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  segmentActive: {
+    backgroundColor: colors.primary,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  segmentTextActive: {
+    color: "#fff",
+  },
+  hCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadow,
+  },
+  hCardLeft: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  hTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  hTaskTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  hFreqBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  hFreqText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  hMeta: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.muted,
+  },
+  hPointsPill: {
+    backgroundColor: colors.success,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  hPoints: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.text,
   },
 });

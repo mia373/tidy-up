@@ -7,7 +7,6 @@ import TasksScreen from "../screens/TasksScreen";
 import AddTaskScreen from "../screens/AddTaskScreen";
 import LeaderboardScreen from "../screens/LeaderboardScreen";
 import WishlistScreen from "../screens/WishlistScreen";
-import HistoryScreen from "../screens/HistoryScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -17,7 +16,6 @@ const TAB_ICONS: Record<string, string> = {
   AddTask: "➕",
   Leaderboard: "🏆",
   Wishlist: "🎁",
-  History: "📋",
   Settings: "⚙️",
 };
 
@@ -79,7 +77,6 @@ export default function MainNavigator() {
       />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
       <Tab.Screen name="Wishlist" component={WishlistScreen} />
-      <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
