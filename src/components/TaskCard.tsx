@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Task } from "../types/models";
 import { PrimaryButton } from "./PrimaryButton";
 import { colors, spacing, shadow } from "../theme";
@@ -28,14 +28,19 @@ function getInitials(name: string): string {
 interface TaskCardProps {
   task: Task;
   onComplete: (taskId: string, points: number) => void;
+  onPress?: () => void;
   loading?: boolean;
 }
 
-export function TaskCard({ task, onComplete, loading }: TaskCardProps) {
+export function TaskCard({ task, onComplete, onPress, loading }: TaskCardProps) {
   const dueDateInfo = task.dueDate ? getDueDateInfo(task.dueDate) : null;
 
   return (
-    <View style={[styles.card, dueDateInfo?.label === "Overdue" && styles.cardOverdue]}>
+    <TouchableOpacity
+      style={[styles.card, dueDateInfo?.label === "Overdue" && styles.cardOverdue]}
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
       <View style={styles.info}>
         <Text style={styles.title}>{task.title}</Text>
         {dueDateInfo && (
@@ -62,7 +67,7 @@ export function TaskCard({ task, onComplete, loading }: TaskCardProps) {
         loading={loading}
         small
       />
-    </View>
+    </TouchableOpacity>
   );
 }
 

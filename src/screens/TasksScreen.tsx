@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, spacing, shadow } from "../theme";
 import { TaskCard } from "../components/TaskCard";
 import { useTasks } from "../hooks/useTasks";
@@ -18,7 +20,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useTasksStore, SortMode } from "../store/useTasksStore";
 import { useNotifications } from "../hooks/useNotifications";
 import { useGenerateTasks } from "../hooks/useGenerateTasks";
-import { Task } from "../types/models";
+import { Task, AppStackParamList } from "../types/models";
 
 const SORT_MODES: { mode: SortMode; label: string }[] = [
   { mode: "newest", label: "Newest" },
@@ -60,6 +62,7 @@ function sortTasks(tasks: Task[], mode: SortMode): Task[] {
 }
 
 export default function TasksScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { tasks, loading } = useTasks(user?.homeId ?? null);
@@ -213,6 +216,7 @@ export default function TasksScreen() {
             <TaskCard
               task={item}
               onComplete={handleComplete}
+              onPress={() => navigation.navigate("EditTask", { task: item })}
               loading={completingId === item.id}
             />
           )}

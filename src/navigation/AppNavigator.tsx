@@ -7,6 +7,7 @@ import HomeProfileScreen from "../screens/HomeProfileScreen";
 import SuggestedTasksScreen from "../screens/SuggestedTasksScreen";
 import HomeSetupScreen from "../screens/HomeSetupScreen";
 import AddWishlistItemScreen from "../screens/AddWishlistItemScreen";
+import EditTaskScreen from "../screens/EditTaskScreen";
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -36,6 +37,11 @@ export default function AppNavigator() {
       <Stack.Screen
         name="AddWishlistItem"
         component={AddWishlistItemScreen}
+        options={{ presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="EditTask"
+        component={EditTaskScreen}
         options={{ presentation: "modal" }}
       />
     </Stack.Navigator>

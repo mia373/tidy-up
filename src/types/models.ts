@@ -76,6 +76,7 @@ export type AppStackParamList = {
   HomeProfile: { mode?: "edit" } | undefined;
   SuggestedTasks: { tasks: SuggestedTask[] };
   AddWishlistItem: undefined;
+  EditTask: { task: Task };
 };
 
 export type MainTabParamList = {

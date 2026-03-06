@@ -92,6 +92,44 @@ export const fetchCompletedTasks = async (
   }
 };
 
+export const updateTask = async (
+  taskId: string,
+  fields: {
+    title: string;
+    points: number;
+    frequency: "once" | "daily" | "weekly";
+    room: string | null;
+    assignedTo: string | null;
+    dueDate: string | null;
+  }
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        title: fields.title,
+        points: fields.points,
+        frequency: fields.frequency,
+        room: fields.room || null,
+        assigned_to: fields.assignedTo || null,
+        due_date: fields.dueDate || null,
+      })
+      .eq("id", taskId);
+    if (error) throw error;
+  } catch {
+    throw new Error("Failed to update task. Please try again.");
+  }
+};
+
+export const deleteTask = async (taskId: string): Promise<void> => {
+  try {
+    const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+    if (error) throw error;
+  } catch {
+    throw new Error("Failed to delete task. Please try again.");
+  }
+};
+
 export const completeTask = async (
   taskId: string,
   userId: string,
