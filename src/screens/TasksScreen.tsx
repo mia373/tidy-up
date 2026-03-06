@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
+import * as Notifications from "expo-notifications";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -21,6 +22,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useTasksStore, SortMode } from "../store/useTasksStore";
 import { useNotifications } from "../hooks/useNotifications";
 import { useGenerateTasks } from "../hooks/useGenerateTasks";
+import { useSettingsStore } from "../store/useSettingsStore";
 import { Task, CompletedTask, AppStackParamList } from "../types/models";
 
 const FREQUENCY_LABEL: Record<string, string> = {
@@ -86,8 +88,39 @@ export default function TasksScreen() {
   const [tabMode, setTabMode] = useState<"open" | "completed">("open");
   const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const { notifyTaskComplete } = useNotifications();
+  const { notifyTaskComplete, scheduleTaskReminders, notifyTaskAssigned } = useNotifications();
   const { triggerGeneration, generating } = useGenerateTasks();
+  const remindersEnabled = useSettingsStore((s) => s.remindersEnabled);
+  const prevTasksRef = useRef<Task[]>([]);
+
+  // Schedule smart reminders when tasks or toggle change
+  useEffect(() => {
+    if (!user || !remindersEnabled) {
+      void Notifications.cancelAllScheduledNotificationsAsync();
+      return;
+    }
+    void scheduleTaskReminders(tasks, user.id);
+  }, [tasks, user?.id, remindersEnabled]);
+
+  // Detect newly-assigned tasks and notify
+  useEffect(() => {
+    if (!user) return;
+    const prevIds = new Set(
+      prevTasksRef.current
+        .filter((t) => t.assignedTo === user.id)
+        .map((t) => t.id)
+    );
+    const newlyAssigned = tasks.filter(
+      (t) =>
+        t.assignedTo === user.id &&
+        !prevIds.has(t.id) &&
+        t.createdBy !== user.id
+    );
+    for (const t of newlyAssigned) {
+      void notifyTaskAssigned(t.title);
+    }
+    prevTasksRef.current = tasks;
+  }, [tasks, user?.id]);
 
   useEffect(() => {
     if (tabMode !== "completed" || !user?.homeId) return;

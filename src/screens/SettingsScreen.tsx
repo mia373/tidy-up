@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   Share,
   ScrollView,
+  Switch,
 } from "react-native";
+import * as Notifications from "expo-notifications";
 import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +21,7 @@ import { updateName, leaveHome } from "../services/settings";
 import { fetchHome } from "../services/homes";
 import { useAuthStore } from "../store/useAuthStore";
 import { useHomeStore } from "../store/useHomeStore";
+import { useSettingsStore } from "../store/useSettingsStore";
 import { AppStackParamList } from "../types/models";
 
 export default function SettingsScreen() {
@@ -26,6 +29,8 @@ export default function SettingsScreen() {
   const setUser = useAuthStore((s) => s.setUser);
   const home = useHomeStore((s) => s.home);
   const setHome = useHomeStore((s) => s.setHome);
+  const remindersEnabled = useSettingsStore((s) => s.remindersEnabled);
+  const setRemindersEnabled = useSettingsStore((s) => s.setRemindersEnabled);
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [name, setName] = useState(user?.name ?? "");
   const [savingName, setSavingName] = useState(false);
@@ -177,6 +182,29 @@ export default function SettingsScreen() {
         <View style={styles.divider} />
 
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Notifications</Text>
+          <Text style={styles.sectionHint}>
+            Daily reminders for assigned and overdue tasks.
+          </Text>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Daily Reminders</Text>
+            <Switch
+              value={remindersEnabled}
+              onValueChange={(val) => {
+                setRemindersEnabled(val);
+                if (!val) {
+                  void Notifications.cancelAllScheduledNotificationsAsync();
+                }
+              }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.surface}
+            />
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>Home</Text>
           <Text style={styles.sectionHint}>
             Leaving removes you from the leaderboard and task board.
@@ -300,6 +328,23 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: "800",
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surface,
+    borderWidth: 3,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    ...shadow,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
   },
   leaveBtn: {
     backgroundColor: colors.error,
