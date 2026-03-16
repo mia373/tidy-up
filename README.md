@@ -2,6 +2,10 @@
 
 A gamified household task manager — earn points for chores, compete with your housemates.
 
+## Demo
+
+https://github.com/mia373/tidy-up/blob/main/DEMO.md
+
 ## What It Does
 
 - Create or join a household via invite code
